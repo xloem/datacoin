@@ -232,9 +232,9 @@ void BitcoinGUI::createActions()
     changePassphraseAction = new QAction(QIcon(":/icons/key"), tr("&Change Passphrase..."), this);
     changePassphraseAction->setStatusTip(tr("Change the passphrase used for wallet encryption"));
     signMessageAction = new QAction(QIcon(":/icons/edit"), tr("Sign &message..."), this);
-    signMessageAction->setStatusTip(tr("Sign messages with your Primecoin addresses to prove you own them"));
+    signMessageAction->setStatusTip(tr("Sign messages with your Datacoin addresses to prove you own them"));
     verifyMessageAction = new QAction(QIcon(":/icons/transaction_0"), tr("&Verify message..."), this);
-    verifyMessageAction->setStatusTip(tr("Verify messages to ensure they were signed with specified Primecoin addresses"));
+    verifyMessageAction->setStatusTip(tr("Verify messages to ensure they were signed with specified Datacoin addresses"));
 
     openRPCConsoleAction = new QAction(QIcon(":/icons/debugwindow"), tr("&Debug window"), this);
     openRPCConsoleAction->setStatusTip(tr("Open debugging and diagnostic console"));
@@ -499,7 +499,7 @@ void BitcoinGUI::setNumConnections(int count)
     default: icon = ":/icons/connect_4"; break;
     }
     labelConnectionsIcon->setPixmap(QIcon(icon).pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
-    labelConnectionsIcon->setToolTip(tr("%n active connection(s) to Primecoin network", "", count));
+    labelConnectionsIcon->setToolTip(tr("%n active connection(s) to Datacoin network", "", count));
 }
 
 void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)
@@ -729,7 +729,7 @@ void BitcoinGUI::dropEvent(QDropEvent *event)
         if (nValidUrisFound)
             walletFrame->gotoSendCoinsPage();
         else
-            message(tr("URI handling"), tr("URI can not be parsed! This can be caused by an invalid Primecoin address or malformed URI parameters."),
+            message(tr("URI handling"), tr("URI can not be parsed! This can be caused by an invalid Datacoin address or malformed URI parameters."),
                       CClientUIInterface::ICON_WARNING);
     }
 
