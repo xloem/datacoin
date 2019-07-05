@@ -1,10 +1,10 @@
 *.tar.gz
 
 *.exe
-src/datacoin
-src/datacoind
-src/datacoin-cli
-src/datacoin-tx
+src/bitcoin
+src/bitcoind
+src/bitcoin-cli
+src/bitcoin-tx
 src/test/test_bitcoin
 src/test/test_bitcoin_fuzzy
 src/qt/test/test_bitcoin-qt
@@ -44,6 +44,12 @@ src/qt/forms/ui_*.h
 
 src/qt/test/moc*.cpp
 
+src/qt/bitcoin-qt.config
+src/qt/bitcoin-qt.creator
+src/qt/bitcoin-qt.creator.user
+src/qt/bitcoin-qt.files
+src/qt/bitcoin-qt.includes
+
 .deps
 .dirstamp
 .libs
@@ -74,9 +80,9 @@ src/qt/test/moc*.cpp
 # Compilation and Qt preprocessor part
 *.qm
 Makefile
-Makefile.am.user
-datacoin-qt
-Datacoin-Qt.app
+bitcoin-qt
+Bitcoin-Qt.app
+background.tiff*
 
 # Unit-tests
 Makefile.test
@@ -110,4 +116,3 @@ test/cache/*
 
 libbitcoinconsensus.pc
 contrib/devtools/split-debug.sh
-/libdatacoinconsensus.pc

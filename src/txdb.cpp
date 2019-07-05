@@ -1,20 +1,18 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2016 The Bitcoin Core developers
-// Copyright (c) 2011-2013 PPCoin developers
-// Copyright (c) 2013 The Primecoin developers
+// Copyright (c) 2009-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "txdb.h"
+#include <txdb.h>
 
-#include "chainparams.h"
-#include "hash.h"
-#include "random.h"
-#include "pow.h"
-#include "uint256.h"
-#include "util.h"
-#include "ui_interface.h"
-#include "init.h"
+#include <chainparams.h>
+#include <hash.h>
+#include <random.h>
+#include <pow.h>
+#include <uint256.h>
+#include <util.h>
+#include <ui_interface.h>
+#include <init.h>
 
 #include <stdint.h>
 
@@ -312,28 +310,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
 
     return true;
 }
-
-//DATACOIN CHECKPOINTSYNC
-//bool CBlockTreeDB::ReadSyncCheckpoint(uint256& hashCheckpoint)
-//{
-//    return Read(std::string("hashSyncCheckpoint"), hashCheckpoint);
-//}
-//
-//bool CBlockTreeDB::WriteSyncCheckpoint(uint256 hashCheckpoint)
-//{
-//    return Write(std::string("hashSyncCheckpoint"), hashCheckpoint);
-//}
-//
-//bool CBlockTreeDB::ReadCheckpointPubKey(std::string& strPubKey)
-//{
-//    return Read(std::string("strCheckpointPubKey"), strPubKey);
-//}
-//
-//bool CBlockTreeDB::WriteCheckpointPubKey(const std::string& strPubKey)
-//{
-//    return Write(std::string("strCheckpointPubKey"), strPubKey);
-//}
-
 
 namespace {
 

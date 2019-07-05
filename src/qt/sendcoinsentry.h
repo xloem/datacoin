@@ -50,15 +50,18 @@ public:
 
 public Q_SLOTS:
     void clear();
+    void checkSubtractFeeFromAmount();
 
 Q_SIGNALS:
     void removeEntry(SendCoinsEntry *entry);
+    void useAvailableBalance(SendCoinsEntry* entry);
     void payAmountChanged();
     void inscriptionChanged();
     void subtractFeeFromAmountChanged();
 
 private Q_SLOTS:
     void deleteClicked();
+    void useAvailableBalanceClicked();
     void on_payTo_textChanged(const QString &address);
     void on_inscription_textChanged(const QString &inscription);
     void on_addressBookButton_clicked();

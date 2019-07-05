@@ -1,14 +1,14 @@
-// Copyright (c) 2011-2016 The Bitcoin Core developers
+// Copyright (c) 2011-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "blockencodings.h"
-#include "consensus/merkle.h"
-#include "chainparams.h"
-#include "random.h"
-#include "prime/prime.h"
+#include <blockencodings.h>
+#include <consensus/merkle.h>
+#include <chainparams.h>
+#include <random.h>
+#include <prime/prime.h>
 
-#include "test/test_bitcoin.h"
+#include <test/test_bitcoin.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -72,6 +72,7 @@ BOOST_AUTO_TEST_CASE(SimpleRoundTripTest)
     CBlock block(BuildBlockTestCase());
 
     pool.addUnchecked(block.vtx[2]->GetHash(), entry.FromTx(*block.vtx[2]));
+    LOCK(pool.cs);
     BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
 
     // Do a simple ShortTxIDs RT
@@ -171,6 +172,7 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)
     CBlock block(BuildBlockTestCase());
 
     pool.addUnchecked(block.vtx[2]->GetHash(), entry.FromTx(*block.vtx[2]));
+    LOCK(pool.cs);
     BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
 
     uint256 txhash;
@@ -237,6 +239,7 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)
     CBlock block(BuildBlockTestCase());
 
     pool.addUnchecked(block.vtx[1]->GetHash(), entry.FromTx(*block.vtx[1]));
+    LOCK(pool.cs);
     BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
 
     uint256 txhash;

@@ -1,22 +1,22 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2009-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "chain.h"
-#include "chainparams.h"
-#include "core_io.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "validation.h"
-#include "httpserver.h"
-#include "rpc/blockchain.h"
-#include "rpc/server.h"
-#include "streams.h"
-#include "sync.h"
-#include "txmempool.h"
-#include "utilstrencodings.h"
-#include "version.h"
+#include <chain.h>
+#include <chainparams.h>
+#include <core_io.h>
+#include <primitives/block.h>
+#include <primitives/transaction.h>
+#include <validation.h>
+#include <httpserver.h>
+#include <rpc/blockchain.h>
+#include <rpc/server.h>
+#include <streams.h>
+#include <sync.h>
+#include <txmempool.h>
+#include <utilstrencodings.h>
+#include <version.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -178,8 +178,11 @@ static bool rest_headers(HTTPRequest* req,
     }
     case RF_JSON: {
         UniValue jsonHeaders(UniValue::VARR);
-        for (const CBlockIndex *pindex : headers) {
-            jsonHeaders.push_back(blockheaderToJSON(pindex));
+        {
+            LOCK(cs_main);
+            for (const CBlockIndex *pindex : headers) {
+                jsonHeaders.push_back(blockheaderToJSON(pindex));
+            }
         }
         std::string strJSON = jsonHeaders.write() + "\n";
         req->WriteHeader("Content-Type", "application/json");
@@ -239,7 +242,11 @@ static bool rest_block(HTTPRequest* req,
     }
 
     case RF_JSON: {
-        UniValue objBlock = blockToJSON(block, pblockindex, showTxDetails);
+        UniValue objBlock;
+        {
+            LOCK(cs_main);
+            objBlock = blockToJSON(block, pblockindex, showTxDetails);
+        }
         std::string strJSON = objBlock.write() + "\n";
         req->WriteHeader("Content-Type", "application/json");
         req->WriteReply(HTTP_OK, strJSON);
@@ -416,8 +423,8 @@ static bool rest_getutxos(HTTPRequest* req, const std::string& strURIPart)
         {
             uint256 txid;
             int32_t nOutput;
-            std::string strTxid = uriParts[i].substr(0, uriParts[i].find("-"));
-            std::string strOutput = uriParts[i].substr(uriParts[i].find("-")+1);
+            std::string strTxid = uriParts[i].substr(0, uriParts[i].find('-'));
+            std::string strOutput = uriParts[i].substr(uriParts[i].find('-')+1);
 
             if (!ParseInt32(strOutput, &nOutput) || !IsHex(strTxid))
                 return RESTERR(req, HTTP_BAD_REQUEST, "Parse error");

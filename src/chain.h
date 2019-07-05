@@ -1,16 +1,16 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2009-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_CHAIN_H
 #define BITCOIN_CHAIN_H
 
-#include "arith_uint256.h"
-#include "primitives/block.h"
-#include "pow.h"
-#include "tinyformat.h"
-#include "uint256.h"
+#include <arith_uint256.h>
+#include <primitives/block.h>
+#include <pow.h>
+#include <tinyformat.h>
+#include <uint256.h>
 
 #include <vector>
 
@@ -369,7 +369,8 @@ public:
     //DATACOIN CHANGED Not used primecoin function
     //CBigNum GetBlockWork() const;
 
-    enum { nMedianTimeSpan=99 };
+
+    static constexpr int nMedianTimeSpan = 99;
 
     int64_t GetMedianTimePast() const
     {

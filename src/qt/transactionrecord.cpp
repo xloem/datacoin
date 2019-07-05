@@ -1,14 +1,14 @@
-// Copyright (c) 2011-2016 The Bitcoin Core developers
+// Copyright (c) 2011-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "transactionrecord.h"
+#include <qt/transactionrecord.h>
 
-#include "base58.h"
-#include "consensus/consensus.h"
-#include "validation.h"
-#include "timedata.h"
-#include "wallet/wallet.h"
+#include <base58.h>
+#include <consensus/consensus.h>
+#include <validation.h>
+#include <timedata.h>
+#include <wallet/wallet.h>
 
 #include <stdint.h>
 
@@ -182,7 +182,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     status.depth = wtx.GetDepthInMainChain();
     status.cur_num_blocks = chainActive.Height();
 
-    if (!CheckFinalTx(wtx))
+    if (!CheckFinalTx(*wtx.tx))
     {
         if (wtx.tx->nLockTime < LOCKTIME_THRESHOLD)
         {
@@ -205,10 +205,6 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
             if (wtx.IsInMainChain())
             {
                 status.matures_in = wtx.GetBlocksToMaturity();
-
-                // Check if the block was requested by anyone
-                if (GetAdjustedTime() - wtx.nTimeReceived > 2 * 60 && wtx.GetRequestCount() == 0)
-                    status.status = TransactionStatus::MaturesWarning;
             }
             else
             {
@@ -225,10 +221,6 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
         if (status.depth < 0)
         {
             status.status = TransactionStatus::Conflicted;
-        }
-        else if (GetAdjustedTime() - wtx.nTimeReceived > 2 * 60 && wtx.GetRequestCount() == 0)
-        {
-            status.status = TransactionStatus::Offline;
         }
         else if (status.depth == 0)
         {
