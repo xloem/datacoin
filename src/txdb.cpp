@@ -1,5 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2011-2013 PPCoin developers
+// Copyright (c) 2013 The Primecoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -275,6 +277,9 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 // Construct block index object
                 CBlockIndex* pindexNew = insertBlockIndex(diskindex.GetBlockHash());
                 pindexNew->pprev          = insertBlockIndex(diskindex.hashPrev);
+                pindexNew->nPrimeChainType   = diskindex.nPrimeChainType;
+                pindexNew->nPrimeChainLength = diskindex.nPrimeChainLength;
+                pindexNew->nMoneySupply      = diskindex.nMoneySupply;
                 pindexNew->nHeight        = diskindex.nHeight;
                 pindexNew->nFile          = diskindex.nFile;
                 pindexNew->nDataPos       = diskindex.nDataPos;
@@ -284,11 +289,17 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nTime          = diskindex.nTime;
                 pindexNew->nBits          = diskindex.nBits;
                 pindexNew->nNonce         = diskindex.nNonce;
+                pindexNew->bnPrimeChainMultiplier = diskindex.bnPrimeChainMultiplier;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
+                pindexNew->nDataSize      = diskindex.nDataSize;
 
-                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, consensusParams))
-                    return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
+                //DATACOIN OPTIMIZE? Понятно почему XPM отключили это. У них не было ("It's clear why XPM turned it off. They didn't have") bnPrimeChainMultiplier.
+                //Но у нас есть. Включить? Замедлит загрузку. Замерить на сколько.
+                // ("But we have. Enable? Slows down the download. Measure by how much.")
+                // Primecoin: disabled proof-of-work check for loading block index
+                //if (!CheckProofOfWork(pindexNew->GetBlockHeaderHash(), pindexNew->nBits, consensusParams))
+                //    return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
 
                 pcursor->Next();
             } else {
@@ -301,6 +312,28 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
 
     return true;
 }
+
+//DATACOIN CHECKPOINTSYNC
+//bool CBlockTreeDB::ReadSyncCheckpoint(uint256& hashCheckpoint)
+//{
+//    return Read(std::string("hashSyncCheckpoint"), hashCheckpoint);
+//}
+//
+//bool CBlockTreeDB::WriteSyncCheckpoint(uint256 hashCheckpoint)
+//{
+//    return Write(std::string("hashSyncCheckpoint"), hashCheckpoint);
+//}
+//
+//bool CBlockTreeDB::ReadCheckpointPubKey(std::string& strPubKey)
+//{
+//    return Read(std::string("strCheckpointPubKey"), strPubKey);
+//}
+//
+//bool CBlockTreeDB::WriteCheckpointPubKey(const std::string& strPubKey)
+//{
+//    return Write(std::string("strCheckpointPubKey"), strPubKey);
+//}
+
 
 namespace {
 

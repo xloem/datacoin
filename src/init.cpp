@@ -1,5 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2011-2013 PPCoin developers
+// Copyright (c) 2013 Primecoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -50,6 +52,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <memory>
+//#include "prime/checkpointsync.h" //DATACOIN CHECKPOINTSYNC
+#include "util.h"
 
 #ifndef WIN32
 #include <signal.h>
@@ -157,6 +161,10 @@ static std::unique_ptr<ECCVerifyHandle> globalVerifyHandle;
 
 void Interrupt(boost::thread_group& threadGroup)
 {
+    //DATACOIN MINER uncomment?
+    // Primecoin: allow miner threads to exit gracefully 
+    if(gArgs.GetBoolArg("-gen", false)) GenerateBitcoins(false, NULL);
+
     InterruptHTTPServer();
     InterruptHTTPRPC();
     InterruptRPC();
@@ -179,7 +187,7 @@ void Shutdown()
     /// for example if the data directory was found to be locked.
     /// Be sure that anything that writes files or flushes caches only does this if the respective
     /// module was initialized.
-    RenameThread("bitcoin-shutoff");
+    RenameThread("datacoin-shutoff");
     mempool.AddTransactionsUpdated(1);
 
     StopHTTPRPC();
@@ -511,8 +519,8 @@ std::string HelpMessage(HelpMessageMode mode)
 
 std::string LicenseInfo()
 {
-    const std::string URL_SOURCE_CODE = "<https://github.com/bitcoin/bitcoin>";
-    const std::string URL_WEBSITE = "<https://bitcoincore.org>";
+    const std::string URL_SOURCE_CODE = "<https://github.com/datacoin/datacoin>";
+    const std::string URL_WEBSITE = "<https://datacoininfo.org>";
 
     return CopyrightHolders(strprintf(_("Copyright (C) %i-%i"), 2009, COPYRIGHT_YEAR) + " ") + "\n" +
            "\n" +
@@ -616,7 +624,7 @@ void CleanupBlockRevFiles()
 void ThreadImport(std::vector<fs::path> vImportFiles)
 {
     const CChainParams& chainparams = Params();
-    RenameThread("bitcoin-loadblk");
+    RenameThread("datacoin-loadblk");
 
     {
     CImportingNow imp;
@@ -810,7 +818,7 @@ void InitLogging()
     fLogIPs = gArgs.GetBoolArg("-logips", DEFAULT_LOGIPS);
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("Bitcoin version %s\n", FormatFullVersion());
+    LogPrintf("Datacoin version %s\n", FormatFullVersion());
 }
 
 namespace { // Variables internal to initialization process only
@@ -933,6 +941,8 @@ bool AppInitParameterInteraction()
             }
         }
     }
+	
+	fDebug = gArgs.GetBoolArg("-debug", false);
 
     // Now remove the logging categories which were explicitly excluded
     for (const std::string& cat : gArgs.GetArgs("-debugexclude")) {
@@ -1042,14 +1052,10 @@ bool AppInitParameterInteraction()
     if (nConnectTimeout <= 0)
         nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
-    if (gArgs.IsArgSet("-minrelaytxfee")) {
-        CAmount n = 0;
-        if (!ParseMoney(gArgs.GetArg("-minrelaytxfee", ""), n)) {
-            return InitError(AmountErrMsg("minrelaytxfee", gArgs.GetArg("-minrelaytxfee", "")));
-        }
-        // High fee check is done afterward in WalletParameterInteraction()
-        ::minRelayTxFee = CFeeRate(n);
-    } else if (incrementalRelayFee > ::minRelayTxFee) {
+    //
+    // primecoin: -mintxfee and -minrelaytxfee options of bitcoin disabled
+    // fixed min fees defined in MIN_TX_FEE and MIN_RELAY_TX_FEE
+	if (incrementalRelayFee > ::minRelayTxFee) {
         // Allow only setting incrementalRelayFee to control both
         ::minRelayTxFee = incrementalRelayFee;
         LogPrintf("Increasing minrelaytxfee to %s to match incrementalrelayfee\n",::minRelayTxFee.ToString());
@@ -1073,6 +1079,14 @@ bool AppInitParameterInteraction()
             return InitError(AmountErrMsg("dustrelayfee", gArgs.GetArg("-dustrelayfee", "")));
         dustRelayFee = CFeeRate(n);
     }
+
+//DATACOIN CHECKPOINTSYNC	
+//    if (gArgs.IsArgSet("-checkpointkey")) // ppcoin: checkpoint master priv key
+//    {
+//        if (!SetCheckpointPrivKey(gArgs.GetArg("-checkpointkey", "")))
+//            return InitError(_("Unable to sign checkpoint, wrong checkpointkey?"));
+//    }
+
 
     fRequireStandard = !gArgs.GetBoolArg("-acceptnonstdtxn", !chainparams.RequireStandard());
     if (chainparams.RequireStandard() && !fRequireStandard)
@@ -1670,6 +1684,39 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
     connOptions.nReceiveFloodSize = 1000*gArgs.GetArg("-maxreceivebuffer", DEFAULT_MAXRECEIVEBUFFER);
     connOptions.m_added_nodes = gArgs.GetArgs("-addnode");
 
+    //TODO: DATACOIN. Ноды для синхронизации (не сид ноды) ("Synchronization nodes (not a node node)")
+    connOptions.m_added_nodes.push_back("212.125.247.47");
+    connOptions.m_added_nodes.push_back("80.211.194.89");
+    connOptions.m_added_nodes.push_back("89.76.251.96");
+    connOptions.m_added_nodes.push_back("119.9.108.125");
+    connOptions.m_added_nodes.push_back("24.161.3.153");
+    connOptions.m_added_nodes.push_back("45.32.165.26");
+    connOptions.m_added_nodes.push_back("80.117.22.23");
+    connOptions.m_added_nodes.push_back("105.228.160.192");
+    connOptions.m_added_nodes.push_back("105.233.54.109");
+    connOptions.m_added_nodes.push_back("109.163.246.81");
+    connOptions.m_added_nodes.push_back("176.59.131.56");
+    connOptions.m_added_nodes.push_back("176.59.135.220");
+    connOptions.m_added_nodes.push_back("91.214.79.144");
+    connOptions.m_added_nodes.push_back("114.252.170.145");
+    connOptions.m_added_nodes.push_back("125.215.137.66");
+    connOptions.m_added_nodes.push_back("139.162.210.78");
+    connOptions.m_added_nodes.push_back("140.186.194.162");
+    connOptions.m_added_nodes.push_back("144.76.64.49");
+    connOptions.m_added_nodes.push_back("148.251.2.141");
+    connOptions.m_added_nodes.push_back("151.80.96.105");
+    connOptions.m_added_nodes.push_back("40.83.220.117");
+    connOptions.m_added_nodes.push_back("45.63.115.238");
+    connOptions.m_added_nodes.push_back("45.77.62.129");
+    connOptions.m_added_nodes.push_back("5.8.126.127");
+    connOptions.m_added_nodes.push_back("78.46.37.209");
+    connOptions.m_added_nodes.push_back("88.98.87.243");
+    connOptions.m_added_nodes.push_back("89.146.70.111");
+    connOptions.m_added_nodes.push_back("92.110.174.51");
+    connOptions.m_added_nodes.push_back("94.130.139.90");
+    connOptions.m_added_nodes.push_back("94.130.220.2");
+    connOptions.m_added_nodes.push_back("99.70.88.220");
+	
     connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;
     connOptions.nMaxOutboundLimit = nMaxOutboundLimit;
 
@@ -1700,6 +1747,17 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
     }
 
     connOptions.vSeedNodes = gArgs.GetArgs("-seednode");
+
+    // hardcoded seednode
+//    if (!fTestNet) {
+//        connOptions.vSeedNodes.push_back("94.130.220.2");
+//        connOptions.vSeedNodes.push_back("45.63.115.238");
+//		connOptions.vSeedNodes.push_back("78.46.37.209");
+//		connOptions.vSeedNodes.push_back("148.251.2.141");
+//		connOptions.vSeedNodes.push_back("119.9.108.125");
+//    }
+    connOptions.vSeedNodes.push_back("192.168.2.9"); //DATACOIN NODES
+
 
     // Initiate outbound connections unless connect=0
     connOptions.m_use_addrman_outgoing = !gArgs.IsArgSet("-connect");

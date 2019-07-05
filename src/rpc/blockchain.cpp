@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2013 Primecoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,6 +26,10 @@
 #include "utilstrencodings.h"
 #include "hash.h"
 #include "warnings.h"
+#include "prime/prime.h"
+#include "wallet/wallet.h"
+#include "init.h"
+//#include "prime/checkpointsync.h" //DATACOIN CHECKPOINTSYNC
 
 #include <stdint.h>
 
@@ -49,29 +54,17 @@ extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& 
 
 double GetDifficulty(const CBlockIndex* blockindex)
 {
+    // Floating point number that is approximate log scale of prime target,
+    // minimum difficulty = 256, maximum difficulty = 2039
     if (blockindex == nullptr)
     {
         if (chainActive.Tip() == nullptr)
-            return 1.0;
+            return 256.0;
         else
             blockindex = chainActive.Tip();
     }
 
-    int nShift = (blockindex->nBits >> 24) & 0xff;
-
-    double dDiff =
-        (double)0x0000ffff / (double)(blockindex->nBits & 0x00ffffff);
-
-    while (nShift < 29)
-    {
-        dDiff *= 256.0;
-        nShift++;
-    }
-    while (nShift > 29)
-    {
-        dDiff /= 256.0;
-        nShift--;
-    }
+    double dDiff = GetPrimeDifficulty(blockindex->nBits);
 
     return dDiff;
 }
@@ -92,12 +85,24 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.push_back(Pair("time", (int64_t)blockindex->nTime));
     result.push_back(Pair("mediantime", (int64_t)blockindex->GetMedianTimePast()));
     result.push_back(Pair("nonce", (uint64_t)blockindex->nNonce));
+	result.push_back(Pair("primechainmultiplier", blockindex->bnPrimeChainMultiplier.ToString())); //DATACOIN ADDED
     result.push_back(Pair("bits", strprintf("%08x", blockindex->nBits)));
-    result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
-    result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex()));
+    result.push_back(Pair("difficulty", GetPrimeDifficulty(blockindex->nBits)));
+    result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex())); 
+    result.push_back(Pair("transition", GetPrimeDifficulty(blockindex->nWorkTransition)));
+	result.push_back(Pair("primechain", GetPrimeChainName(blockindex->nPrimeChainType, blockindex->nPrimeChainLength)));
+//	auto& hHash=blockindex->GetHeaderHash();
+//	if (hHash) {
+//		CBigNum bnPrimeChainOrigin = CBigNum(hHash) * blockindex->bnPrimeChainMultiplier;
+//		result.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));		
+//	} else
+//		result.push_back(Pair("primeorigin", "unknown"));	
 
-    if (blockindex->pprev)
+    if (blockindex->pprev) {
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
+		CBigNum bnPrimeChainOrigin = CBigNum(blockindex->GetHeaderHash()) * blockindex->bnPrimeChainMultiplier;
+		result.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));
+	}
     CBlockIndex *pnext = chainActive.Next(blockindex);
     if (pnext)
         result.push_back(Pair("nextblockhash", pnext->GetBlockHash().GetHex()));
@@ -118,6 +123,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.push_back(Pair("weight", (int)::GetBlockWeight(block)));
     result.push_back(Pair("height", blockindex->nHeight));
     result.push_back(Pair("version", block.nVersion));
+	result.push_back(Pair("headerhash", block.GetHeaderHash().GetHex()));
     result.push_back(Pair("versionHex", strprintf("%08x", block.nVersion)));
     result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
     UniValue txs(UniValue::VARR);
@@ -136,9 +142,14 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.push_back(Pair("time", block.GetBlockTime()));
     result.push_back(Pair("mediantime", (int64_t)blockindex->GetMedianTimePast()));
     result.push_back(Pair("nonce", (uint64_t)block.nNonce));
+    result.push_back(Pair("primechainmultiplier", block.bnPrimeChainMultiplier.ToString())); //DATACOIN ADDED
     result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex()));
+    result.push_back(Pair("transition", GetPrimeDifficulty(blockindex->nWorkTransition)));
+    CBigNum bnPrimeChainOrigin = CBigNum(block.GetHeaderHash()) * block.bnPrimeChainMultiplier;
+    result.push_back(Pair("primechain", GetPrimeChainName(blockindex->nPrimeChainType, blockindex->nPrimeChainLength)));
+    result.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));
 
     if (blockindex->pprev)
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
@@ -319,9 +330,9 @@ UniValue getdifficulty(const JSONRPCRequest& request)
     if (request.fHelp || request.params.size() != 0)
         throw std::runtime_error(
             "getdifficulty\n"
-            "\nReturns the proof-of-work difficulty as a multiple of the minimum difficulty.\n"
+            "\nReturns the proof-of-work difficulty in prime chain length.\n"
             "\nResult:\n"
-            "n.nnn       (numeric) the proof-of-work difficulty as a multiple of the minimum difficulty.\n"
+            "n.nnn       (numeric) the proof-of-work difficulty in prime chain length.\n"
             "\nExamples:\n"
             + HelpExampleCli("getdifficulty", "")
             + HelpExampleRpc("getdifficulty", "")
@@ -680,7 +691,7 @@ UniValue getblockheader(const JSONRPCRequest& request)
     if (!fVerbose)
     {
         CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);
-        ssBlock << pblockindex->GetBlockHeader();
+        ssBlock << pblockindex->GetFullBlockHeader();
         std::string strHex = HexStr(ssBlock.begin(), ssBlock.end());
         return strHex;
     }
@@ -962,8 +973,8 @@ UniValue gettxout(const JSONRPCRequest& request)
             "     \"hex\" : \"hex\",        (string) \n"
             "     \"reqSigs\" : n,          (numeric) Number of required signatures\n"
             "     \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
-            "     \"addresses\" : [          (array of string) array of bitcoin addresses\n"
-            "        \"address\"     (string) bitcoin address\n"
+            "     \"addresses\" : [          (array of string) array of datacoin addresses\n"
+            "        \"address\"     (string) datacoin address\n"
             "        ,...\n"
             "     ]\n"
             "  },\n"
@@ -1548,16 +1559,20 @@ UniValue getchaintxstats(const JSONRPCRequest& request)
     const CBlockIndex* pindexPast = pindex->GetAncestor(pindex->nHeight - blockcount);
     int nTimeDiff = pindex->GetMedianTimePast() - pindexPast->GetMedianTimePast();
     int nTxDiff = pindex->nChainTx - pindexPast->nChainTx;
+    long long int nDataSizeDiff = pindex->nChainDataSize - pindexPast->nChainDataSize;
 
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("time", (int64_t)pindex->nTime));
     ret.push_back(Pair("txcount", (int64_t)pindex->nChainTx));
+    ret.push_back(Pair("datasize", (int64_t)pindex->nChainDataSize));
     ret.push_back(Pair("window_block_count", blockcount));
     if (blockcount > 0) {
         ret.push_back(Pair("window_tx_count", nTxDiff));
+        ret.push_back(Pair("window_data_size", (int64_t)nDataSizeDiff));
         ret.push_back(Pair("window_interval", nTimeDiff));
         if (nTimeDiff > 0) {
             ret.push_back(Pair("txrate", ((double)nTxDiff) / nTimeDiff));
+            ret.push_back(Pair("datarate", ((double)nDataSizeDiff) / nTimeDiff));
         }
     }
 
@@ -1583,6 +1598,294 @@ UniValue savemempool(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
+// Primecoin: list prime chain records within primecoin network
+UniValue listprimerecords(const JSONRPCRequest& request)
+{	
+	auto& fHelp = request.fHelp;
+	auto& params = request.params;
+
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw std::runtime_error(
+            "listprimerecords <primechain length> [primechain type]\n"
+            "Returns the list of record prime chains in datacoin network.\n"
+            "<primechain length> is integer like 10, 11, 12 etc.\n"
+            "[primechain type] is optional type, among 1CC, 2CC and TWN");
+
+    int nPrimeChainLength = params[0].get_int();
+    unsigned int nPrimeChainType = 0;
+    if (params.size() > 1)
+    {
+        std::string strPrimeChainType = params[1].get_str();
+        if (strPrimeChainType.compare("1CC") == 0)
+            nPrimeChainType = PRIME_CHAIN_CUNNINGHAM1;
+        else if (strPrimeChainType.compare("2CC") == 0)
+            nPrimeChainType = PRIME_CHAIN_CUNNINGHAM2;
+        else if (strPrimeChainType.compare("TWN") == 0)
+            nPrimeChainType = PRIME_CHAIN_BI_TWIN;
+        else
+            throw std::runtime_error("Prime chain type must be 1CC, 2CC or TWN.");
+    }
+
+    UniValue ret(UniValue::VOBJ);
+
+    CBigNum bnPrimeRecord = 0;
+
+	CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+	bool fwavail = EnsureWalletIsAvailable(pwallet, request.fHelp);
+				
+    uint32_t nHeight=0;
+    for (CBlockIndex* pindex = chainActive[nHeight]; pindex; nHeight++)
+    {
+        if (nPrimeChainLength != (int) TargetGetLength(pindex->nPrimeChainLength))
+            continue; // length not matching, next block
+        if (nPrimeChainType && nPrimeChainType != pindex->nPrimeChainType)
+            continue; // type not matching, next block
+
+        CBlock block;
+		if (!ReadBlockFromDisk(block, pindex, Params().GetConsensus())) continue;
+
+        CBigNum bnPrimeChainOrigin = CBigNum(block.GetHeaderHash()) * block.bnPrimeChainMultiplier; // compute prime chain origin
+
+        if (bnPrimeChainOrigin > bnPrimeRecord)
+        {
+            bnPrimeRecord = bnPrimeChainOrigin; // new record in primecoin
+            ret.push_back(Pair("time", DateTimeStrFormat("%Y-%m-%d %H:%M:%S UTC", pindex->GetBlockTime())));
+            ret.push_back(Pair("epoch", (boost::int64_t) pindex->GetBlockTime()));
+            ret.push_back(Pair("height", pindex->nHeight));
+			if (fwavail) ret.push_back(Pair("ismine", pwallet->IsMine(*(block.vtx[0]))));
+            CTxDestination address;
+            ret.push_back(Pair("mineraddress", (block.vtx[0]->vout.size() > 1)? "multiple" : ExtractDestination(block.vtx[0]->vout[0].scriptPubKey, address)? EncodeDestination(address) : "invalid"));
+            ret.push_back(Pair("primedigit", (int) bnPrimeChainOrigin.ToString().length()));
+            ret.push_back(Pair("primechain", GetPrimeChainName(pindex->nPrimeChainType, pindex->nPrimeChainLength)));
+            ret.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));
+            ret.push_back(Pair("primorialform", GetPrimeOriginPrimorialForm(bnPrimeChainOrigin)));
+        }
+    }
+
+    return ret;
+}
+
+// Primecoin: list top prime chain within primecoin network
+UniValue listtopprimes(const JSONRPCRequest& request)
+{	
+	auto& fHelp = request.fHelp;
+	auto& params = request.params;
+
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw std::runtime_error(
+            "listtopprimes <primechain length> [primechain type]\n"
+            "Returns the list of top prime chains in datacoin network.\n"
+            "<primechain length> is integer like 10, 11, 12 etc.\n"
+            "[primechain type] is optional type, among 1CC, 2CC and TWN");
+
+    int nPrimeChainLength = params[0].get_int();
+    unsigned int nPrimeChainType = 0;
+    if (params.size() > 1)
+    {
+        std::string strPrimeChainType = params[1].get_str();
+        if (strPrimeChainType.compare("1CC") == 0)
+            nPrimeChainType = PRIME_CHAIN_CUNNINGHAM1;
+        else if (strPrimeChainType.compare("2CC") == 0)
+            nPrimeChainType = PRIME_CHAIN_CUNNINGHAM2;
+        else if (strPrimeChainType.compare("TWN") == 0)
+            nPrimeChainType = PRIME_CHAIN_BI_TWIN;
+        else
+            throw std::runtime_error("Prime chain type must be 1CC, 2CC or TWN.");
+    }
+
+    // Search for top prime chains
+    unsigned int nRankingSize = 10; // ranking list size
+    unsigned int nSortVectorSize = 64; // vector size for sort operation
+    CBigNum bnPrimeQualify = 0; // minimum qualify value for ranking list
+    std::vector<std::pair<CBigNum, uint256> > vSortedByOrigin;
+	
+	uint32_t nHeight=0;
+    for (CBlockIndex* pindex = chainActive[nHeight]; pindex; nHeight++)
+    {
+        if (nPrimeChainLength != (int) TargetGetLength(pindex->nPrimeChainLength))
+            continue; // length not matching, next block
+        if (nPrimeChainType && nPrimeChainType != pindex->nPrimeChainType)
+            continue; // type not matching, next block
+
+        CBlock block;
+		if (!ReadBlockFromDisk(block, pindex, Params().GetConsensus())) continue;
+        CBigNum bnPrimeChainOrigin = CBigNum(block.GetHeaderHash()) * block.bnPrimeChainMultiplier; // compute prime chain origin
+
+        if (bnPrimeChainOrigin > bnPrimeQualify)
+            vSortedByOrigin.push_back(std::make_pair(bnPrimeChainOrigin, block.GetHash()));
+
+        if (vSortedByOrigin.size() >= nSortVectorSize)
+        {
+            // Sort prime chain candidates
+            sort(vSortedByOrigin.begin(), vSortedByOrigin.end());
+            reverse(vSortedByOrigin.begin(), vSortedByOrigin.end());
+            // Truncate candidate list
+            while (vSortedByOrigin.size() > nRankingSize)
+                vSortedByOrigin.pop_back();
+            // Update minimum qualify value for top prime chains
+            bnPrimeQualify = vSortedByOrigin.back().first;
+        }
+    }
+
+    // Final sort of prime chain candidates
+    sort(vSortedByOrigin.begin(), vSortedByOrigin.end());
+    reverse(vSortedByOrigin.begin(), vSortedByOrigin.end());
+    // Truncate candidate list
+    while (vSortedByOrigin.size() > nRankingSize)
+        vSortedByOrigin.pop_back();
+
+	CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+	bool fwavail = EnsureWalletIsAvailable(pwallet, request.fHelp);
+	
+    // Output top prime chains
+    UniValue ret(UniValue::VOBJ);
+    for(const auto& item : vSortedByOrigin)
+    {
+        CBigNum bnPrimeChainOrigin = item.first;
+        CBlockIndex* pindex = mapBlockIndex[item.second];
+        CBlock block;
+        if (!ReadBlockFromDisk(block, pindex, Params().GetConsensus())) continue;
+        ret.push_back(Pair("time", DateTimeStrFormat("%Y-%m-%d %H:%M:%S UTC", pindex->GetBlockTime())));
+        ret.push_back(Pair("epoch", (boost::int64_t) pindex->GetBlockTime()));
+        ret.push_back(Pair("height", pindex->nHeight));
+        if (fwavail) ret.push_back(Pair("ismine", pwallet->IsMine(*(block.vtx[0]))));
+        CTxDestination address;
+        ret.push_back(Pair("mineraddress", (block.vtx[0]->vout.size() > 1)? "multiple" : ExtractDestination(block.vtx[0]->vout[0].scriptPubKey, address)? EncodeDestination(address) : "invalid"));
+        ret.push_back(Pair("primedigit", (int) bnPrimeChainOrigin.ToString().length()));
+        ret.push_back(Pair("primechain", GetPrimeChainName(pindex->nPrimeChainType, pindex->nPrimeChainLength)));
+        ret.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));
+        ret.push_back(Pair("primorialform", GetPrimeOriginPrimorialForm(bnPrimeChainOrigin)));
+    }
+
+    return ret;
+}
+
+
+// make a public-private key pair (first introduced in ppcoin)
+UniValue makekeypair(const JSONRPCRequest& request)
+{	
+	auto& fHelp = request.fHelp;
+	auto& params = request.params;
+
+    if (fHelp || params.size() > 1)
+        throw std::runtime_error(
+            "makekeypair [prefix]\n"
+            "Make a public/private key pair.\n"
+            "[prefix] is optional preferred prefix for the public key.\n");
+
+    std::string strPrefix = "";
+    if (params.size() > 0)
+        strPrefix = params[0].get_str();
+
+    CKey key;
+    int nCount = 0;
+    do
+    {
+        key.MakeNewKey(false);
+        nCount++;
+    } while (nCount < 10000 && strPrefix != HexStr(key.GetPubKey().begin(), key.GetPubKey().end()).substr(0, strPrefix.size()));
+
+    if (strPrefix != HexStr(key.GetPubKey().begin(), key.GetPubKey().end()).substr(0, strPrefix.size()))
+        return UniValue::VNULL;
+
+    //bool fCompressed;
+    //CSecret vchSecret = key.GetSecret(fCompressed);
+    UniValue result(UniValue::VOBJ);
+    result.push_back(Pair("PublicKey", HexStr(key.GetPubKey().begin(), key.GetPubKey().end())));
+    result.push_back(Pair("PrivateKey", CBitcoinSecret(key).ToString()));
+    return result;
+}
+
+//DATACOIN CHECKPOINTSYNC
+//UniValue enforcecheckpoint(const JSONRPCRequest& request)
+//{	
+//	auto& fHelp = request.fHelp;
+//	auto& params = request.params;
+//
+//    if (fHelp || params.size() != 1)
+//        throw std::runtime_error(
+//            "enforcecheckpoint <enforce>\n"
+//            "<enforce> is true or false to enable or disable enforcement of broadcasted checkpoints by developer.");
+//
+//    bool fEnforceCheckpoint = params[0].get_bool();
+//    if (gArgs.IsArgSet("-checkpointkey") && !fEnforceCheckpoint)
+//        throw std::runtime_error(
+//            "checkpoint master node must enforce synchronized checkpoints.");
+//    if (fEnforceCheckpoint)
+//        strCheckpointWarning = "";
+//    gArgs.SoftSetBoolArg("-checkpointenforce", (fEnforceCheckpoint ? true : false));
+//    return UniValue::VNULL;
+//}
+
+//DATACOIN CHECKPOINTSYNC
+//UniValue sendcheckpoint(const JSONRPCRequest& request)
+//{	
+//	auto& fHelp = request.fHelp;
+//	auto& params = request.params;
+//
+//    if (fHelp || params.size() != 1)
+//        throw std::runtime_error(
+//            "sendcheckpoint <blockhash>\n"
+//            "Send a synchronized checkpoint.\n");
+//
+//    if (!gArgs.IsArgSet("-checkpointkey") || CSyncCheckpoint::strMasterPrivKey.empty())
+//        throw std::runtime_error("Not a checkpointmaster node, first set checkpointkey in configuration and restart client. ");
+//
+//    std::string strHash = params[0].get_str();
+//    uint256 hash= uint256S(strHash);
+//
+//    if (!SendSyncCheckpoint(hash))
+//        throw std::runtime_error("Failed to send checkpoint, check log. ");
+//
+//    UniValue result(UniValue::VOBJ);
+//    CBlockIndex* pindexCheckpoint;
+//
+//    result.push_back(Pair("synccheckpoint", hashSyncCheckpoint.ToString()));
+//    if (mapBlockIndex.count(hashSyncCheckpoint))
+//    {
+//        pindexCheckpoint = mapBlockIndex[hashSyncCheckpoint];
+//        result.push_back(Pair("height", pindexCheckpoint->nHeight));
+//        result.push_back(Pair("timestamp", (boost::int64_t) pindexCheckpoint->GetBlockTime()));
+//    }
+//    result.push_back(Pair("subscribemode", IsSyncCheckpointEnforced()? "enforce" : "advisory"));
+//    if (gArgs.IsArgSet("-checkpointkey"))
+//        result.push_back(Pair("checkpointmaster", true));
+//
+//    return result;
+//}
+
+
+//DATACOIN CHECKPOINTSYNC
+// RPC commands related to sync checkpoints
+// get information of sync-checkpoint (first introduced in ppcoin)
+//UniValue getcheckpoint(const JSONRPCRequest& request)
+//{	
+//	auto& fHelp = request.fHelp;
+//	auto& params = request.params;
+//
+//    if (fHelp || params.size() != 0)
+//        throw std::runtime_error(
+//            "getcheckpoint\n"
+//            "Show info of synchronized checkpoint.\n");
+//
+//    UniValue result(UniValue::VOBJ);
+//    CBlockIndex* pindexCheckpoint;
+//
+//    result.push_back(Pair("synccheckpoint", hashSyncCheckpoint.ToString()));
+//    if (mapBlockIndex.count(hashSyncCheckpoint))
+//    {
+//        pindexCheckpoint = mapBlockIndex[hashSyncCheckpoint];
+//        result.push_back(Pair("height", pindexCheckpoint->nHeight));
+//        result.push_back(Pair("timestamp", (boost::int64_t) pindexCheckpoint->GetBlockTime()));
+//    }
+//    result.push_back(Pair("subscribemode", IsSyncCheckpointEnforced()? "enforce" : "advisory"));
+//    if (gArgs.IsArgSet("-checkpointkey"))
+//        result.push_back(Pair("checkpointmaster", true));
+//
+//    return result;
+//}
+
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
@@ -1606,6 +1909,15 @@ static const CRPCCommand commands[] =
     { "blockchain",         "savemempool",            &savemempool,            {} },
     { "blockchain",         "verifychain",            &verifychain,            {"checklevel","nblocks"} },
 
+//DATACOIN CHECKPOINTSYNC
+//    { "blockchain",         "getcheckpoint",          &getcheckpoint,          {} },
+//    { "blockchain",         "sendcheckpoint",         &sendcheckpoint,         {"blockhash"} },
+//    { "blockchain",         "enforcecheckpoint",      &enforcecheckpoint,      {"enforce"} },
+    { "blockchain",         "makekeypair",            &makekeypair,            {"prefix"} },
+
+    { "blockchain",         "listprimerecords",       &listprimerecords,       {"primechain_length","primechain_type"} },
+    { "blockchain",         "listtopprimes",          &listtopprimes,          {"primechain_length","primechain_type"} },
+	
     { "blockchain",         "preciousblock",          &preciousblock,          {"blockhash"} },
 
     /* Not shown in help */

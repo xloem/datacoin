@@ -9,6 +9,8 @@
 #include "primitives/transaction.h"
 #include "serialize.h"
 #include "uint256.h"
+#include "prime/bignum.h"
+#include "hash.h"
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -25,8 +27,15 @@ public:
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
     uint32_t nTime;
-    uint32_t nBits;
+    uint32_t nBits;  // Primecoin: prime chain target, see prime.cpp
     uint32_t nNonce;
+
+    // Primecoin: proof-of-work certificate
+    // Multiplier to block hash to derive the probable prime chain (k=0, 1, ...)
+    // Cunningham Chain of first kind:  hash * multiplier * 2**k - 1
+    // Cunningham Chain of second kind: hash * multiplier * 2**k + 1
+    // BiTwin Chain:                    hash * multiplier * 2**k +/- 1
+    CBigNum bnPrimeChainMultiplier;
 
     CBlockHeader()
     {
@@ -43,6 +52,7 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
+		READWRITE(bnPrimeChainMultiplier);
     }
 
     void SetNull()
@@ -53,6 +63,7 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
+		bnPrimeChainMultiplier = 0;
     }
 
     bool IsNull() const
@@ -60,7 +71,24 @@ public:
         return (nBits == 0);
     }
 
-    uint256 GetHash() const;
+    // Primecoin: header hash does not include prime certificate
+    // Данный хеш используется для проверки POW. Включать в хэш bnPrimeChainMultiplier нельзя
+    // ("This hash is used to verify POW. Included in the hash bnPrimeChainMultiplier can not")
+    uint256 GetHeaderHash() const
+    {
+        //DATACOIN CHANGED Переделываем хеширование ("Remaking hashing")
+        //return Hash(BEGIN(nVersion), END(nNonce));
+
+        //CDataStream ss(SER_GETHASH, 0);
+        //ss << nVersion << hashPrevBlock << hashMerkleRoot << nTime << nBits << nNonce;
+        //return Hash(ss.begin(), ss.end());
+
+        CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
+        ss << nVersion << hashPrevBlock << hashMerkleRoot << nTime << nBits << nNonce;
+        return ss.GetHash();
+    }
+
+	uint256 GetHash() const;
 
     int64_t GetBlockTime() const
     {
@@ -77,6 +105,8 @@ public:
 
     // memory only
     mutable bool fChecked;
+    mutable unsigned int nPrimeChainType;   // primecoin: chain type (memory-only)
+    mutable unsigned int nPrimeChainLength; // primecoin: chain length (memory-only)
 
     CBlock()
     {
@@ -102,6 +132,8 @@ public:
         CBlockHeader::SetNull();
         vtx.clear();
         fChecked = false;
+        nPrimeChainType = 0;
+        nPrimeChainLength = 0;
     }
 
     CBlockHeader GetBlockHeader() const
@@ -113,6 +145,10 @@ public:
         block.nTime          = nTime;
         block.nBits          = nBits;
         block.nNonce         = nNonce;
+        block.bnPrimeChainMultiplier = bnPrimeChainMultiplier;
+        //DATACOIN OLDCLIENT !!! XPM не заполяет это поле. Исправить? ("XPM does not fill this field. Fix?")
+        //также ("also") CBlockIndex::GetBlockHeader()
+        //block.bnPrimeChainMultiplier = bnPrimeChainMultiplier; 
         return block;
     }
 

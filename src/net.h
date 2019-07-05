@@ -648,6 +648,7 @@ public:
     CRollingBloomFilter addrKnown;
     bool fGetAddr;
     std::set<uint256> setKnown;
+    uint256 hashCheckpointKnown; // ppcoin: known sent sync-checkpoint
     int64_t nNextAddrSend;
     int64_t nNextLocalAddrSend;
 

@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2013 Primecoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,6 +18,11 @@
 
 #include <stdint.h>
 #include <string>
+
+#define PRIMECOIN_PORT   4777
+#define RPC_PORT         11777 
+#define TESTNET_PORT     4776
+#define TESTNET_RPC_PORT 11776
 
 /** Message header.
  * (4) message start.
@@ -294,7 +300,13 @@ enum ServiceFlags : uint64_t {
  * Thus, generally, avoid calling with peerServices == NODE_NONE.
  */
 static ServiceFlags GetDesirableServiceFlags(ServiceFlags services) {
-    return ServiceFlags(NODE_NETWORK | NODE_WITNESS);
+    //DATACOIN SEGWIT 
+    //we auto connect only nodes with all these flags.
+    //now there are not witness nodes
+    //Turn on NODE_WITNESS only after many nodes (especially seed nodes) 
+    // will have it
+    //return ServiceFlags(NODE_NETWORK | NODE_WITNESS);
+    return ServiceFlags(NODE_NETWORK);
 }
 
 /**

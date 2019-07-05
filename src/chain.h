@@ -193,6 +193,11 @@ public:
 
     //! (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
     arith_uint256 nChainWork;
+    unsigned int nWorkTransition; // primecoin: work transition ratio (memory-only)
+
+    unsigned int nPrimeChainType;   // primecoin: chain type
+    unsigned int nPrimeChainLength; // primecoin: chain length
+    int64_t nMoneySupply;             // primecoin: money supply
 
     //! Number of transactions in this block.
     //! Note: in a potential headers-first mode, this number cannot be relied upon
@@ -202,6 +207,9 @@ public:
     //! This value will be non-zero only if and only if transactions for this block and all its parents are available.
     //! Change to 64-bit type when necessary; won't happen before 2030
     unsigned int nChainTx;
+	
+	unsigned int nDataSize; //DATACOIN ADDED
+	unsigned long long int nChainDataSize;
 
     //! Verification status of this block. See enum BlockStatus
     uint32_t nStatus;
@@ -212,6 +220,7 @@ public:
     uint32_t nTime;
     uint32_t nBits;
     uint32_t nNonce;
+	CBigNum bnPrimeChainMultiplier; //DATACOIN ADDED
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId;
@@ -229,8 +238,14 @@ public:
         nDataPos = 0;
         nUndoPos = 0;
         nChainWork = arith_uint256();
+        nWorkTransition = 0;
+        nPrimeChainType = 0;
+        nPrimeChainLength = 0;
+        nMoneySupply = 0;
         nTx = 0;
         nChainTx = 0;
+		nDataSize = 0; //DATACOIN ADDED
+		nChainDataSize = 0;
         nStatus = 0;
         nSequenceId = 0;
         nTimeMax = 0;
@@ -240,6 +255,7 @@ public:
         nTime          = 0;
         nBits          = 0;
         nNonce         = 0;
+		bnPrimeChainMultiplier = 0;
     }
 
     CBlockIndex()
@@ -256,6 +272,7 @@ public:
         nTime          = block.nTime;
         nBits          = block.nBits;
         nNonce         = block.nNonce;
+		bnPrimeChainMultiplier = block.bnPrimeChainMultiplier;
     }
 
     CDiskBlockPos GetBlockPos() const {
@@ -276,7 +293,7 @@ public:
         return ret;
     }
 
-    CBlockHeader GetBlockHeader() const
+    CBlockHeader GetNonFullBlockHeader() const //DATACOIN CHANGED было GetBlockHeader
     {
         CBlockHeader block;
         block.nVersion       = nVersion;
@@ -286,9 +303,54 @@ public:
         block.nTime          = nTime;
         block.nBits          = nBits;
         block.nNonce         = nNonce;
+		//DATACOIN CHANGED !!! XPM CBlockIndex не содержит bnPrimeChainMultiplier.
+		//block.bnPrimeChainMultiplier = bnPrimeChainMultiplier; 
+		//Вследствие по сети в HEADERS отправляется тоже пустое поле и приемник 
+		//net_processing.cpp NetMsgType::GETHEADERS 
+		//не может на месте проверить консистентность хэшей.
+		//Желательно исправить.
+		//так же смотри CBlock::GetBlockHeader()
+		
         return block;
     }
 
+	CBlockHeader GetFullBlockHeader() const //DATACOIN CHANGED было GetBlockHeader
+    {
+        CBlockHeader block;
+        block.nVersion       = nVersion;
+        if (pprev)
+            block.hashPrevBlock = pprev->GetBlockHash();
+        block.hashMerkleRoot = hashMerkleRoot;
+        block.nTime          = nTime;
+        block.nBits          = nBits;
+        block.nNonce         = nNonce;
+        block.bnPrimeChainMultiplier = bnPrimeChainMultiplier;
+        //DATACOIN CHANGED !!! XPM CBlockIndex не содержит bnPrimeChainMultiplier.
+        //block.bnPrimeChainMultiplier = bnPrimeChainMultiplier; 
+        //Вследствие по сети в HEADERS отправляется тоже пустое поле и приемник 
+        //net_processing.cpp NetMsgType::GETHEADERS 
+        //не может на месте проверить консистентность хэшей.
+        //Желательно исправить.
+        //так же смотри CBlock::GetBlockHeader()
+		
+        return block;
+    }
+
+	uint256 GetHeaderHash() const //DATACOIN ADDED
+    {
+        //DATACOIN CHANGED Переделываем хеширование
+	
+		//CDataStream ss(SER_GETHASH, 0);
+        //ss << nVersion << hashPrevBlock << hashMerkleRoot << nTime << nBits << nNonce;
+        //return Hash(ss.begin(), ss.end());
+		
+		if (!pprev) return 0;
+		
+		CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
+		ss << nVersion << pprev->GetBlockHash() << hashMerkleRoot << nTime << nBits << nNonce;
+		return ss.GetHash();
+    }
+	
     uint256 GetBlockHash() const
     {
         return *phashBlock;
@@ -303,8 +365,11 @@ public:
     {
         return (int64_t)nTimeMax;
     }
+	
+    //DATACOIN CHANGED Not used primecoin function
+    //CBigNum GetBlockWork() const;
 
-    enum { nMedianTimeSpan=11 };
+    enum { nMedianTimeSpan=99 };
 
     int64_t GetMedianTimePast() const
     {
@@ -371,13 +436,16 @@ class CDiskBlockIndex : public CBlockIndex
 {
 public:
     uint256 hashPrev;
+	uint256 hashBlock; // primecoin: persist block hash as well
 
     CDiskBlockIndex() {
         hashPrev = uint256();
+		hashBlock = 0;
     }
 
     explicit CDiskBlockIndex(const CBlockIndex* pindex) : CBlockIndex(*pindex) {
         hashPrev = (pprev ? pprev->GetBlockHash() : uint256());
+		hashBlock = (pindex ? pindex->GetBlockHash() : 0);
     }
 
     ADD_SERIALIZE_METHODS;
@@ -388,9 +456,13 @@ public:
         if (!(s.GetType() & SER_GETHASH))
             READWRITE(VARINT(_nVersion));
 
-        READWRITE(VARINT(nHeight));
+        READWRITE(VARINT(nPrimeChainType));
+        READWRITE(VARINT(nPrimeChainLength));
+        READWRITE(VARINT(nMoneySupply));
+		READWRITE(VARINT(nHeight));
         READWRITE(VARINT(nStatus));
         READWRITE(VARINT(nTx));
+		READWRITE(VARINT(nDataSize)); //DATACOIN ADDED
         if (nStatus & (BLOCK_HAVE_DATA | BLOCK_HAVE_UNDO))
             READWRITE(VARINT(nFile));
         if (nStatus & BLOCK_HAVE_DATA)
@@ -405,18 +477,13 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
+		READWRITE(bnPrimeChainMultiplier);
+		READWRITE(hashBlock);
     }
 
     uint256 GetBlockHash() const
     {
-        CBlockHeader block;
-        block.nVersion        = nVersion;
-        block.hashPrevBlock   = hashPrev;
-        block.hashMerkleRoot  = hashMerkleRoot;
-        block.nTime           = nTime;
-        block.nBits           = nBits;
-        block.nNonce          = nNonce;
-        return block.GetHash();
+        return hashBlock;
     }
 
 

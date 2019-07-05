@@ -11,8 +11,16 @@
 #include "script/script.h"
 #include "serialize.h"
 #include "uint256.h"
+#include "utilstrencodings.h"
 
 static const int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
+
+enum GetMinFee_mode
+{
+    GMF_BLOCK,
+    GMF_RELAY,
+    GMF_SEND,
+};
 
 /** An outpoint - a combination of a transaction hash and an index n into its vout */
 class COutPoint
@@ -226,11 +234,14 @@ inline void UnserializeTransaction(TxType& tx, Stream& s) {
         throw std::ios_base::failure("Unknown transaction optional data");
     }
     s >> tx.nLockTime;
+	s >> tx.data;
 }
 
 template<typename Stream, typename TxType>
 inline void SerializeTransaction(const TxType& tx, Stream& s) {
-    const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
+	const bool fAllowWitness = false; //DATACOIN SEGWIT Жестко выключили сериализацию с витнес. Включить когда будет большинство новых клиентов.
+                                      // ("Hardly turned off the serialization of Witnes. Include when there will be most new customers.")
+    //const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
 
     s << tx.nVersion;
     unsigned char flags = 0;
@@ -255,6 +266,7 @@ inline void SerializeTransaction(const TxType& tx, Stream& s) {
         }
     }
     s << tx.nLockTime;
+	s << tx.data;
 }
 
 
@@ -265,7 +277,7 @@ class CTransaction
 {
 public:
     // Default transaction version.
-    static const int32_t CURRENT_VERSION=2;
+    static const int32_t CURRENT_VERSION=1; //DATACOIN OLDCLIENT Сменить на 2 при первой возможности ("Change to 2 as soon as possible")
 
     // Changing the default transaction version requires a two step process: first
     // adapting relay policy by bumping MAX_STANDARD_VERSION, and then later date
@@ -282,6 +294,9 @@ public:
     const std::vector<CTxOut> vout;
     const int32_t nVersion;
     const uint32_t nLockTime;
+    const std::vector<unsigned char> data;
+	static int64_t nMinTxFee;
+	static int64_t nMinRelayTxFee;
 
 private:
     /** Memory only. */
@@ -309,6 +324,10 @@ public:
 
     bool IsNull() const {
         return vin.empty() && vout.empty();
+    }
+
+    std::string GetBase64Data() const {
+        return EncodeBase64(data.data(), data.size());
     }
 
     const uint256& GetHash() const {
@@ -356,6 +375,8 @@ public:
         }
         return false;
     }
+	
+	int64_t GetMinFee(unsigned int nBlockSize=1, bool fAllowFree=false, enum GetMinFee_mode mode=GMF_BLOCK) const;
 };
 
 /** A mutable version of CTransaction. */
@@ -365,6 +386,7 @@ struct CMutableTransaction
     std::vector<CTxOut> vout;
     int32_t nVersion;
     uint32_t nLockTime;
+    std::vector<unsigned char> data;
 
     CMutableTransaction();
     CMutableTransaction(const CTransaction& tx);

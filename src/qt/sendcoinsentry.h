@@ -1,11 +1,11 @@
-// Copyright (c) 2011-2015 The Bitcoin Core developers
+// Copyright (c) 2011-2017 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_QT_SENDCOINSENTRY_H
 #define BITCOIN_QT_SENDCOINSENTRY_H
 
-#include "walletmodel.h"
+#include <qt/walletmodel.h>
 
 #include <QStackedWidget>
 
@@ -38,6 +38,8 @@ public:
 
     void setValue(const SendCoinsRecipient &value);
     void setAddress(const QString &address);
+    void setInscription(const QString &inscription);
+    void setAmount(const CAmount &amount);
 
     /** Set up the tab chain manually, as Qt messes up the tab chain by default in some cases
      *  (issue https://bugreports.qt-project.org/browse/QTBUG-10907).
@@ -52,11 +54,13 @@ public Q_SLOTS:
 Q_SIGNALS:
     void removeEntry(SendCoinsEntry *entry);
     void payAmountChanged();
+    void inscriptionChanged();
     void subtractFeeFromAmountChanged();
 
 private Q_SLOTS:
     void deleteClicked();
     void on_payTo_textChanged(const QString &address);
+    void on_inscription_textChanged(const QString &inscription);
     void on_addressBookButton_clicked();
     void on_pasteButton_clicked();
     void updateDisplayUnit();
@@ -68,6 +72,7 @@ private:
     const PlatformStyle *platformStyle;
 
     bool updateLabel(const QString &address);
+    bool updateInscription(const QString &inscription);
 };
 
 #endif // BITCOIN_QT_SENDCOINSENTRY_H

@@ -138,16 +138,16 @@
         <translation>Повторно индексирање на блокови од дискот...</translation>
     </message>
     <message>
-        <source>Send coins to a Bitcoin address</source>
-        <translation>Испрати биткоини на Биткоин адреса</translation>
+        <source>Send coins to a Datacoin address</source>
+        <translation>Испрати коини на DTC адреса</translation>
     </message>
     <message>
         <source>&amp;Verify message...</source>
         <translation>&amp;Потврди порака...</translation>
     </message>
     <message>
-        <source>Bitcoin</source>
-        <translation>Биткоин</translation>
+        <source>Datacoin</source>
+        <translation>Datacoin</translation>
     </message>
     <message>
         <source>Wallet</source>
@@ -572,14 +572,14 @@
     <name>WalletView</name>
     </context>
 <context>
-    <name>bitcoin-core</name>
+    <name>datacoin-core</name>
     <message>
         <source>Options:</source>
         <translation>Опции:</translation>
     </message>
     <message>
-        <source>Bitcoin Core</source>
-        <translation>Биткоин Core</translation>
+        <source>Datacoin Core</source>
+        <translation>Datacoin Core</translation>
     </message>
     <message>
         <source>Warning</source>

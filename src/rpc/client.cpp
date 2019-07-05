@@ -33,8 +33,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "generate", 1, "maxtries" },
     { "generatetoaddress", 0, "nblocks" },
     { "generatetoaddress", 2, "maxtries" },
-    { "getnetworkhashps", 0, "nblocks" },
-    { "getnetworkhashps", 1, "height" },
+//    { "getnetworkhashps", 0, "nblocks" },
+//    { "getnetworkhashps", 1, "height" },
     { "sendtoaddress", 1, "amount" },
     { "sendtoaddress", 4, "subtractfeefromamount" },
     { "sendtoaddress", 5 , "replaceable" },
@@ -143,6 +143,18 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "echojson", 9, "arg9" },
     { "rescanblockchain", 0, "start_height"},
     { "rescanblockchain", 1, "stop_height"},
+    { "setgenerate", 0, "generate"}, // ConvertTo<boost::int64_t>(params[0]);
+    { "setgenerate", 1, "genproclimit"}, // ConvertTo<boost::int64_t>(params[0]);
+    { "setsievesize", 0, "sievesize"}, // ConvertTo<boost::int64_t>(params[0]);
+    { "setsievefilterprimes", 0, "number_of_primes"}, // ConvertTo<boost::int64_t>(params[0]);
+    { "setsieveextensions", 0, "sieveextensions"}, // ConvertTo<boost::int64_t>(params[0]);
+    { "sendalert", 2, "minver"}, // ConvertTo<boost::int64_t>(params[2]);
+    { "sendalert", 3, "maxver"}, // ConvertTo<boost::int64_t>(params[3]);
+    { "sendalert", 4, "priority"}, // ConvertTo<boost::int64_t>(params[4]);
+    { "sendalert", 5, "id"}, // ConvertTo<boost::int64_t>(params[5]);
+    { "sendalert", 6, "cancelupto"}, // ConvertTo<boost::int64_t>(params[6]);
+    { "enforcecheckpoint", 0, "enforce"}, // ConvertTo<bool>(params[0]);
+
 };
 
 class CRPCConvertTable

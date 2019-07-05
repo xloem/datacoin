@@ -31,6 +31,7 @@
 #include "ui_interface.h"
 #include "utilmoneystr.h"
 #include "wallet/fees.h"
+//#include "main.h"
 
 #include <assert.h>
 
@@ -2557,7 +2558,7 @@ bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, int& nC
 
     CReserveKey reservekey(this);
     CWalletTx wtx;
-    if (!CreateTransaction(vecSend, wtx, reservekey, nFeeRet, nChangePosInOut, strFailReason, coinControl, false)) {
+    if (!CreateTransaction(vecSend, wtx, reservekey, nFeeRet, nChangePosInOut, strFailReason, coinControl, std::string())) {
         return false;
     }
 
@@ -2591,8 +2592,7 @@ bool CWallet::FundTransaction(CMutableTransaction& tx, CAmount& nFeeRet, int& nC
     return true;
 }
 
-bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet,
-                                int& nChangePosInOut, std::string& strFailReason, const CCoinControl& coin_control, bool sign)
+bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet, int& nChangePosInOut, std::string& strFailReason, const CCoinControl& coin_control, const std::string& txData, bool sign)
 {
     CAmount nValue = 0;
     int nChangePosRequest = nChangePosInOut;
@@ -2609,14 +2609,23 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
         if (recipient.fSubtractFeeFromAmount)
             nSubtractFeeFromAmount++;
     }
-    if (vecSend.empty())
-    {
-        strFailReason = _("Transaction must have at least one recipient");
-        return false;
-    }
+    //if (vecSend.empty())
+    //{
+    //    strFailReason = _("Transaction must have at least one recipient");
+    //    return false;
+    //}
 
     wtxNew.fTimeReceivedIsTxTime = true;
     wtxNew.BindWallet(this);
+
+	auto txdecdata = DecodeBase64(txData.c_str());
+	
+    // transaction data
+    if (txdecdata.size() > MAX_TX_DATA_SIZE) {
+        strFailReason = _("txData is too long");
+        return false;
+    }
+	
     CMutableTransaction txNew;
 
     // Discourage fee sniping.
@@ -2652,6 +2661,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
     assert(txNew.nLockTime < LOCKTIME_THRESHOLD);
     FeeCalculation feeCalc;
     CAmount nFeeNeeded;
+	txNew.data = txdecdata;
     unsigned int nBytes;
     {
         std::set<CInputCoin> setCoins;
@@ -2710,6 +2720,10 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 // vouts to the payees
                 for (const auto& recipient : vecSend)
                 {
+                    // don't create an output for zero coins in data transaction
+                    if (0 == recipient.nAmount && txdecdata.size() > 0)
+                        continue;
+
                     CTxOut txout(recipient.nAmount, recipient.scriptPubKey);
 
                     if (recipient.fSubtractFeeFromAmount)
@@ -2751,8 +2765,15 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                     }
                 }
 
-                const CAmount nChange = nValueIn - nValueToSelect;
+                CAmount nChange = nValueIn - nValueToSelect;
 
+				// ppcoin: sub-cent change is moved to fee
+                if (nChange > 0 && nChange < MIN_TXOUT_AMOUNT)
+                {
+                    nFeeRet += nChange;
+                    nChange = 0;
+                }
+				
                 if (nChange > 0)
                 {
                     // Fill a vout to ourself
@@ -2795,7 +2816,10 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 // to avoid conflicting with other possible uses of nSequence,
                 // and in the spirit of "smallest possible change from prior
                 // behavior."
-                const uint32_t nSequence = coin_control.signalRbf ? MAX_BIP125_RBF_SEQUENCE : (CTxIn::SEQUENCE_FINAL - 1);
+                //DATACOIN OLDCLIENT Костыль из за старых клиентов. Создаем транзакции старого формата. Потом вернуть как было.
+                // ("Crutch from for old customers. Create a transaction of the old format. Then return as it was.")
+                const uint32_t nSequence = CTxIn::SEQUENCE_FINAL;
+                //const uint32_t nSequence = coin_control.signalRbf ? MAX_BIP125_RBF_SEQUENCE : (CTxIn::SEQUENCE_FINAL - 1);
                 for (const auto& coin : setCoins)
                     txNew.vin.push_back(CTxIn(coin.outpoint,CScript(),
                                               nSequence));
@@ -3015,6 +3039,48 @@ bool CWallet::AddAccountingEntry(const CAccountingEntry& acentry, CWalletDB *pwa
 
     return true;
 }
+
+std::string CWallet::SendData(CWalletTx& wtxNew, bool fAskFee, const std::string& txData)
+{
+    // Check amount
+    if (payTxFee.GetFeePerK() > GetBalance())
+        return _("Insufficient funds for fee");
+
+    CReserveKey reservekey(this);
+    CAmount nFeeRequired;
+
+    if (IsLocked())
+    {
+        std::string strError = _("Error: Wallet locked, unable to create transaction!");
+        LogPrintf("SendData() : %s", strError.c_str());
+        return strError;
+    }
+
+    std::string strError;
+	std::vector<CRecipient> vecSend;
+    //CScript scriptPubKey;
+	int nChangePosRet = -1;
+	CCoinControl no_coin_control; // This is a deprecated API
+    if (!CreateTransaction(vecSend, wtxNew, reservekey, nFeeRequired, nChangePosRet, strError,  no_coin_control, txData))
+    {
+        if (nFeeRequired > GetBalance())
+            strError = strprintf(_("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!"), FormatMoney(nFeeRequired).c_str());
+        LogPrintf("SendData() : %s\n", strError.c_str());
+		
+		if (fAskFee) uiInterface.ThreadSafeMessageBox(strError, "", CClientUIInterface::MSG_WARNING);
+		
+        return strError;
+    }
+
+    LogPrintf("SendData(): nFeeRequired = %f\n", double(nFeeRequired) / COIN );
+
+	CValidationState state;
+    if (!CommitTransaction(wtxNew, reservekey, g_connman.get(), state))
+        return _("Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
+
+    return "";
+}
+
 
 DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
 {
@@ -4052,7 +4118,7 @@ int CMerkleTx::GetBlocksToMaturity() const
 {
     if (!IsCoinBase())
         return 0;
-    return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
+    return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain()); //TODO: COINBASE_MATURITY+200 ?
 }
 
 

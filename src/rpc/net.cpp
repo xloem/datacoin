@@ -1,4 +1,6 @@
 // Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2012-2013 PPCoin developers
+// Copyright (c) 2013 Primecoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -20,6 +22,8 @@
 #include "utilstrencodings.h"
 #include "version.h"
 #include "warnings.h"
+#include "base58.h"
+//#include "prime/alert.h" //DATACOIN ALERT
 
 #include <univalue.h>
 
@@ -207,8 +211,8 @@ UniValue addnode(const JSONRPCRequest& request)
             "1. \"node\"     (string, required) The node (see getpeerinfo for nodes)\n"
             "2. \"command\"  (string, required) 'add' to add a node to the list, 'remove' to remove a node from the list, 'onetry' to try a connection to the node once\n"
             "\nExamples:\n"
-            + HelpExampleCli("addnode", "\"192.168.0.6:8333\" \"onetry\"")
-            + HelpExampleRpc("addnode", "\"192.168.0.6:8333\", \"onetry\"")
+            + HelpExampleCli("addnode", "\"192.168.0.6:4777\" \"onetry\"")
+            + HelpExampleRpc("addnode", "\"192.168.0.6:4777\", \"onetry\"")
         );
 
     if(!g_connman)
@@ -249,9 +253,9 @@ UniValue disconnectnode(const JSONRPCRequest& request)
             "1. \"address\"     (string, optional) The IP address/port of the node\n"
             "2. \"nodeid\"      (number, optional) The node ID (see getpeerinfo for node IDs)\n"
             "\nExamples:\n"
-            + HelpExampleCli("disconnectnode", "\"192.168.0.6:8333\"")
+            + HelpExampleCli("disconnectnode", "\"192.168.0.6:4777\"")
             + HelpExampleCli("disconnectnode", "\"\" 1")
-            + HelpExampleRpc("disconnectnode", "\"192.168.0.6:8333\"")
+            + HelpExampleRpc("disconnectnode", "\"192.168.0.6:4777\"")
             + HelpExampleRpc("disconnectnode", "\"\", 1")
         );
 
@@ -296,7 +300,7 @@ UniValue getaddednodeinfo(const JSONRPCRequest& request)
             "    \"connected\" : true|false,          (boolean) If connected\n"
             "    \"addresses\" : [                    (list of objects) Only when connected = true\n"
             "       {\n"
-            "         \"address\" : \"192.168.0.201:8333\",  (string) The bitcoin server IP and port we're connected to\n"
+            "         \"address\" : \"192.168.0.201:4777\",  (string) The datacoin server IP and port we're connected to\n"
             "         \"connected\" : \"outbound\"           (string) connection, inbound or outbound\n"
             "       }\n"
             "     ]\n"
@@ -458,7 +462,7 @@ UniValue getnetworkinfo(const JSONRPCRequest& request)
 
     LOCK(cs_main);
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("version",       CLIENT_VERSION));
+    obj.push_back(Pair("version",       FormatFullVersion()));
     obj.push_back(Pair("subversion",    strSubVersion));
     obj.push_back(Pair("protocolversion",PROTOCOL_VERSION));
     if(g_connman)
@@ -624,6 +628,83 @@ UniValue setnetworkactive(const JSONRPCRequest& request)
     return g_connman->GetNetworkActive();
 }
 
+
+//DATACOIN ALERT
+//Deleted from new bitcoin client. Delete it from DTC also
+// Send alert (first introduced in ppcoin)
+// There is a known deadlock situation with ThreadMessageHandler
+// ThreadMessageHandler: holds cs_vSend and acquiring cs_main in SendMessages()
+// ThreadRPCServer: holds cs_main and acquiring cs_vSend in alert.RelayTo()/PushMessage()/BeginMessage()
+//UniValue sendalert(const JSONRPCRequest& request)
+//{	
+//	auto& fHelp = request.fHelp;
+//	auto& params = request.params;
+//
+//    if (fHelp || params.size() < 6)
+//        throw std::runtime_error(
+//            "sendalert <message> <privatekey> <minver> <maxver> <priority> <id> [cancelupto]\n"
+//            "<message> is the alert text message\n"
+//            "<privatekey> is base58 hex string of alert master private key\n"
+//            "<minver> is the minimum applicable internal client version\n"
+//            "<maxver> is the maximum applicable internal client version\n"
+//            "<priority> is integer priority number\n"
+//            "<id> is the alert id\n"
+//            "[cancelupto] cancels all alert id's up to this number\n"
+//            "Returns true or false.");
+//
+//    // Prepare the alert message
+//    CAlert alert;
+//    alert.strStatusBar = params[0].get_str();
+//    alert.nMinVer = params[2].get_int();
+//    alert.nMaxVer = params[3].get_int();
+//    alert.nPriority = params[4].get_int();
+//    alert.nID = params[5].get_int();
+//    if (params.size() > 6)
+//        alert.nCancel = params[6].get_int();
+//    alert.nVersion = PROTOCOL_VERSION;
+//    alert.nRelayUntil = GetAdjustedTime() + 365*24*60*60;
+//    alert.nExpiration = GetAdjustedTime() + 365*24*60*60;
+//
+//    CDataStream sMsg(SER_NETWORK, PROTOCOL_VERSION);
+//    sMsg << (CUnsignedAlert)alert;
+//    alert.vchMsg = std::vector<unsigned char>(sMsg.begin(), sMsg.end());
+//
+//    // Prepare master key and sign alert message
+//    CBitcoinSecret vchSecret;
+//    if (!vchSecret.SetString(params[1].get_str()))
+//        throw std::runtime_error("Invalid alert master key");
+//    CKey key = vchSecret.GetKey();
+//    //bool fCompressed;
+//    //CSecret secret = vchSecret.GetSecret(fCompressed);
+//    //key.SetSecret(secret, fCompressed); // if key is not correct openssl may crash
+//    if (!key.Sign(Hash(alert.vchMsg.begin(), alert.vchMsg.end()), alert.vchSig))
+//        throw std::runtime_error(
+//            "Unable to sign alert, check alert master key?\n");
+//
+//    // Process alert
+//    if(!alert.ProcessAlert())
+//        throw std::runtime_error(
+//            "Failed to process alert.\n");
+//
+//    // Relay alert
+//    {
+//		g_connman->ForEachNode([&alert](CNode* pnode) {
+//			alert.RelayTo(pnode);
+//		});
+//    }
+//
+//    UniValue result(UniValue::VOBJ);
+//    result.push_back(Pair("strStatusBar", alert.strStatusBar));
+//    result.push_back(Pair("nVersion", alert.nVersion));
+//    result.push_back(Pair("nMinVer", alert.nMinVer));
+//    result.push_back(Pair("nMaxVer", alert.nMaxVer));
+//    result.push_back(Pair("nPriority", alert.nPriority));
+//    result.push_back(Pair("nID", alert.nID));
+//    if (alert.nCancel > 0)
+//        result.push_back(Pair("nCancel", alert.nCancel));
+//    return result;
+//}
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
@@ -639,6 +720,8 @@ static const CRPCCommand commands[] =
     { "network",            "listbanned",             &listbanned,             {} },
     { "network",            "clearbanned",            &clearbanned,            {} },
     { "network",            "setnetworkactive",       &setnetworkactive,       {"state"} },
+//DATACOIN ALERT
+//	{ "network",         	"sendalert",              &sendalert,              {"message","privatekey","minver","maxver","priority","id","cancelupto"} },
 };
 
 void RegisterNetRPCCommands(CRPCTable &t)

@@ -8,11 +8,20 @@
 
 #include "primitives/block.h"
 #include "txmempool.h"
+#include "wallet/wallet.h"
 
 #include <stdint.h>
 #include <memory>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
+
+/** Run the miner threads */
+void GenerateBitcoins(bool fGenerate, CWallet* pwallet);
+
+extern double dPrimesPerSec;
+extern double dChainsPerDay;
+extern double dBlocksPerDay;
+extern int64_t nHPSTimerStart;
 
 class CBlockIndex;
 class CChainParams;
@@ -71,7 +80,7 @@ struct modifiedentry_iter {
 // except operating on CTxMemPoolModifiedEntry.
 // TODO: refactor to avoid duplication of this logic.
 struct CompareModifiedEntry {
-    bool operator()(const CTxMemPoolModifiedEntry &a, const CTxMemPoolModifiedEntry &b)
+    bool operator()(const CTxMemPoolModifiedEntry &a, const CTxMemPoolModifiedEntry &b) const
     {
         double f1 = (double)a.nModFeesWithAncestors * b.nSizeWithAncestors;
         double f2 = (double)b.nModFeesWithAncestors * a.nSizeWithAncestors;
@@ -202,7 +211,10 @@ private:
 };
 
 /** Modify the extranonce in a block */
-void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
+void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce, bool fNoReset = false);
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
+
+bool CheckWork(CBlock* pblock, CWallet& wallet, std::shared_ptr<CReserveScript> reserve_script, bool fSilent=false);
+bool MiniMiner(CBlock *pblock, CBlockIndex* pindexPrev, bool allowIncrementExtraNonce = false); //DATACOIN ADD
 
 #endif // BITCOIN_MINER_H

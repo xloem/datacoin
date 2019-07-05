@@ -161,8 +161,10 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state, bool fChe
     // Basic checks that don't depend on any context
     if (tx.vin.empty())
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-empty");
-    if (tx.vout.empty())
-        return state.DoS(10, false, REJECT_INVALID, "bad-txns-vout-empty");
+    if (tx.vout.empty() && 0 == tx.data.size())
+        return state.DoS(10, false, REJECT_INVALID, "bad-txns-vout-empty and 0 == data.size()");
+	if (tx.data.size() > MAX_TX_DATA_SIZE)
+        return state.DoS(100, false, REJECT_INVALID, "data.size() > MAX_TX_DATA_SIZE");
     // Size limits (this doesn't take the witness into account, as that hasn't been checked for malleability)
     if (::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT)
         return state.DoS(100, false, REJECT_INVALID, "bad-txns-oversize");
@@ -171,8 +173,13 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state, bool fChe
     CAmount nValueOut = 0;
     for (const auto& txout : tx.vout)
     {
-        if (txout.nValue < 0)
-            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-negative");
+        //DATACOIN SEGWIT Accept txout nValue==0, scriptPubKey[0]==OP_RETURN, data.size()==0 ???
+        //Кажется такая реализация разрешит постить пустые транзакции бесплатно.
+        // ("It seems that this implementation will allow you to post empty transactions for free.")
+        //GenerateCoinbaseCommitment in validation.cpp
+        //if (txout.nValue < MIN_TXOUT_AMOUNT && !(txout.nValue==0 && txout.scriptPubKey[0]==OP_RETURN && tx.data.size()==0))
+        if (txout.nValue < MIN_TXOUT_AMOUNT)
+            return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-belowminimum");
         if (txout.nValue > MAX_MONEY)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-toolarge");
         nValueOut += txout.nValue;
@@ -241,6 +248,10 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, CValidationState& state, c
 
     // Tally transaction fees
     const CAmount txfee_aux = nValueIn - value_out;
+    // ppcoin: enforce transaction fees for every block
+    if (txfee_aux < tx.GetMinFee())
+        return state.DoS(100, false, REJECT_INVALID, strprintf("CheckInputs() : %s not paying required fee=%s, paid=%s", tx.GetHash().ToString().substr(0,10).c_str(), FormatMoney(tx.GetMinFee()).c_str(), FormatMoney(txfee_aux).c_str()));
+
     if (!MoneyRange(txfee_aux)) {
         return state.DoS(100, false, REJECT_INVALID, "bad-txns-fee-outofrange");
     }

@@ -12,7 +12,7 @@
 
 CMerkleBlock::CMerkleBlock(const CBlock& block, CBloomFilter* filter, const std::set<uint256>* txids)
 {
-    header = block.GetBlockHeader();
+    header = block.GetBlockHeader(); //DATACOIN WASTED Wasted instruction ???
 
     std::vector<bool> vMatch;
     std::vector<uint256> vHashes;

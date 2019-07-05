@@ -1137,6 +1137,7 @@ public:
              SerializeOutput(s, nOutput);
         // Serialize nLockTime
         ::Serialize(s, txTo.nLockTime);
+		::Serialize(s, txTo.data);
     }
 };
 
@@ -1221,6 +1222,8 @@ uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsig
         ss << hashOutputs;
         // Locktime
         ss << txTo.nLockTime;
+		// DTC Data
+		ss << txTo.data;
         // Sighash type
         ss << nHashType;
 

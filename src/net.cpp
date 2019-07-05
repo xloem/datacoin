@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2013 The Primecoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1502,7 +1503,7 @@ void ThreadMapPort()
             }
         }
 
-        std::string strDesc = "Bitcoin " + FormatFullVersion();
+        std::string strDesc = "Datacoin " + FormatFullVersion();
 
         try {
             while (true) {
@@ -2718,6 +2719,7 @@ CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn
     filterInventoryKnown.reset();
     fSendMempool = false;
     fGetAddr = false;
+	hashCheckpointKnown = 0;
     nNextLocalAddrSend = 0;
     nNextAddrSend = 0;
     nNextInvSend = 0;
@@ -2761,10 +2763,13 @@ CNode::~CNode()
 void CNode::AskFor(const CInv& inv)
 {
     if (mapAskFor.size() > MAPASKFOR_MAX_SZ || setAskFor.size() > SETASKFOR_MAX_SZ)
-        return;
+	{	LogPrintf("CALL to AskFor FAILED. Overload.\n"); //DATACOIN CHANGED
+		return;}
     // a peer may not have multiple non-responded queue positions for a single inv item
-    if (!setAskFor.insert(inv.hash).second)
+    if (!setAskFor.insert(inv.hash).second) {
+        LogPrintf("CALL to AskFor. Already asked. Skip.\n"); //DATACOIN CHANGED
         return;
+    }
 
     // We're using mapAskFor as a priority queue,
     // the key is the earliest time the request can be sent

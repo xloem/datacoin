@@ -26,10 +26,14 @@
 #include "util.h"
 #include "utilmoneystr.h"
 #include "validationinterface.h"
+#include "prime/prime.h"
+#include "madpool/primeserver.h" //DATACOIN POOL
 
 #include <algorithm>
 #include <queue>
 #include <utility>
+#include <vector>
+#include <boost/thread.hpp>
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -45,6 +49,11 @@
 uint64_t nLastBlockTx = 0;
 uint64_t nLastBlockWeight = 0;
 
+double dPrimesPerSec = 0.0;
+double dChainsPerDay = 0.0;
+double dBlocksPerDay = 0.0;
+int64_t nHPSTimerStart = 0;
+
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
     int64_t nOldTime = pblock->nTime;
@@ -54,8 +63,8 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
         pblock->nTime = nNewTime;
 
     // Updating time can change work required on testnet:
-    if (consensusParams.fPowAllowMinDifficultyBlocks)
-        pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
+    //if (consensusParams.fPowAllowMinDifficultyBlocks)
+    //    pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
 
     return nNewTime - nOldTime;
 }
@@ -141,6 +150,12 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                        ? nMedianTimePast
                        : pblock->GetBlockTime();
 
+    pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
+    //DATACOIN MINER. Now draft for bnPrimeChainMultiplier. May be more compex or =0?
+    //Вообще nOnce и bnPrimeChainMultiplier должен подбирать майнер
+    // ("In general, nOnce and bnPrimeChainMultiplier should be selected by a miner")
+    pblock->bnPrimeChainMultiplier = chainparams.GenesisBlock().bnPrimeChainMultiplier; 
+
     // Decide whether to include witness transactions
     // This is only needed in case the witness softfork activation is reverted
     // (which would require a very deep reorganization) or when
@@ -164,13 +179,23 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vout.resize(1);
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
-    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(pblock->nBits, chainparams.GetConsensus());
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
-    pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
-    pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
-    pblocktemplate->vTxFees[0] = -nFees;
 
-    LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
+	
+    //if (fDebug && gArgs.GetBoolArg("-printmining", false))
+    //    LogPrintf("BlockAssembler::CreateNewBlock()\n");//: total size %u\n", nBlockSize);
+
+    pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
+
+    //DATACOIN SEGWIT добавляет в ("adds to") coinbaseTx vout c nValue=0
+    //pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
+	
+    pblocktemplate->vTxFees[0] = -nFees;
+	
+
+    if (fDebug || gArgs.GetBoolArg("-printmining", false) || !gArgs.GetBoolArg("-gen", false))
+        LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
 
     // Fill in header
     pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
@@ -440,11 +465,11 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
     }
 }
 
-void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce)
+void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce, bool fNoReset)
 {
     // Update nExtraNonce
     static uint256 hashPrevBlock;
-    if (hashPrevBlock != pblock->hashPrevBlock)
+    if (!fNoReset && hashPrevBlock != pblock->hashPrevBlock)
     {
         nExtraNonce = 0;
         hashPrevBlock = pblock->hashPrevBlock;
@@ -452,9 +477,845 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     ++nExtraNonce;
     unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required for block.version=2
     CMutableTransaction txCoinbase(*pblock->vtx[0]);
-    txCoinbase.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;
+    const char* pszDedication = gArgs.GetArg("-dedication", "").c_str();
+    txCoinbase.vin[0].scriptSig = (CScript() << nHeight << CBigNum(nExtraNonce) << std::vector<unsigned char>((const unsigned char*)pszDedication, (const unsigned char*)pszDedication + strlen(pszDedication))) + COINBASE_FLAGS;
     assert(txCoinbase.vin[0].scriptSig.size() <= 100);
 
     pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+}
+
+bool CheckWork(CBlock* pblock, CWallet& wallet, std::shared_ptr<CReserveScript> reserve_script, bool fSilent) //CReserveKey& reservekey)
+{
+    //DATACOIN WASTED Primecoin wasting instruction?
+    //C_BigNum bnTarget = CBigNum().SetCompact(pblock->nBits); 
+	
+    if (!CheckProofOfWork(pblock->GetHeaderHash(), pblock->nBits, Params().GetConsensus(), pblock->bnPrimeChainMultiplier, pblock->nPrimeChainType, pblock->nPrimeChainLength, fSilent))
+        return fSilent ? false : error("DatacoinMiner : failed proof-of-work check");
+
+    //// debug print
+    LogPrintf("DatacoinMiner:\n");
+    LogPrintf("proof-of-work found  \n  target: %s\n  multiplier: %s\n  ", TargetToString(pblock->nBits).c_str(), pblock->bnPrimeChainMultiplier.GetHex().c_str());
+    LogPrintf("%s", pblock->ToString().c_str());
+    LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0]->vout[0].nValue).c_str());
+
+    // Found a solution
+    {
+        LOCK(cs_main);
+        if (pblock->hashPrevBlock != pindexBestHeader->GetBlockHash())// pcoinsTip->GetBestBlock()) //TODO: chainActive.Tip()->GetBlockHash()?
+            return error("DatacoinMiner : generated block is stale");
+
+        // Track how many getdata requests this block gets
+        {
+            LOCK(wallet.cs_wallet);
+            wallet.mapRequestCount[pblock->GetHash()] = 0;
+        }
+
+        // Process this block the same as if we had received it from another node
+        //CValidationState state;
+		bool fNewBlock;
+        if (!ProcessNewBlock(Params(), std::make_shared<const CBlock>(*pblock) , true, &fNewBlock))
+            return error("DatacoinMiner : ProcessNewBlock, block not accepted");
+
+        // Remove key from key pool
+        //reservekey.KeepKey(); //DATACOIN MINER
+        reserve_script->KeepScript();
+
+    }
+
+    return true;
+}
+
+//DATACOIN OPTIMIZE? //DATACOIN MINER
+bool MiniMiner(CBlock *pblock, CBlockIndex* pindexPrev, bool allowIncrementExtraNonce) //DATACOIN ADD
+{
+	if (!pindexPrev) return false;
+	
+    static CCriticalSection cs;
+    LogPrintf("DatacoinMiner started\n");
+
+    unsigned int nExtraNonce = 0;
+
+    unsigned int nPrimorialMultiplier = nPrimorialHashFactor;
+    int nAdjustPrimorial = 1; // increase or decrease primorial factor
+    const unsigned int nRoundSamples = 40; // how many rounds to sample before adjusting primorial
+    double dSumBlockExpected = 0.0; // sum of expected blocks
+    int64_t nSumRoundTime = 0; // sum of round times
+    unsigned int nRoundNum = 0; // number of rounds
+    double dAverageBlockExpectedPrev = 0.0; // previous average expected blocks per second
+    unsigned int nPrimorialMultiplierPrev = nPrimorialMultiplier; // previous primorial factor
+
+    // Primecoin HP: Increase initial primorial
+    if (fTestNet)
+        nPrimorialMultiplier = nInitialPrimorialMultiplierTestnet;
+    else
+        nPrimorialMultiplier = nInitialPrimorialMultiplier;
+
+    // Primecoin: Check if a fixed primorial was requested
+    unsigned int nFixedPrimorial = (unsigned int)gArgs.GetArg("-primorial", 0);
+    if (nFixedPrimorial > 0)
+    {
+        nFixedPrimorial = std::max(nFixedPrimorial, nPrimorialHashFactor);
+        nPrimorialMultiplier = nFixedPrimorial;
+    }
+
+    // Primecoin: Allow choosing the mining protocol version
+    unsigned int nMiningProtocol = (unsigned int)gArgs.GetArg("-miningprotocol", 1);
+
+    // Primecoin: Allocate data structures for mining
+    CSieveOfEratosthenes sieve;
+    CPrimalityTestParams testParams;
+
+
+    // Many machines may be using the same key if they are sharing the same wallet
+    // Make extra nonce unique by setting it to a modulo of the high resolution clock's value
+    const unsigned int nExtraNonceModulo = 10000000;
+    boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+    boost::chrono::nanoseconds ns_now = boost::chrono::duration_cast<boost::chrono::nanoseconds>(time_now.time_since_epoch());
+    nExtraNonce = ns_now.count() % nExtraNonceModulo;
+
+        if (allowIncrementExtraNonce) IncrementExtraNonce(pblock, pindexPrev, nExtraNonce, true);
+
+        if (fDebug && gArgs.GetBoolArg("-printmining", false))
+            LogPrintf("Running DatacoinMiner with %u transactions in block (%u bytes)\n", static_cast<unsigned int>(pblock->vtx.size()),
+               static_cast<unsigned int>(::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION)));
+
+        bool fNewBlock = true;
+
+        // Primecoin: try to find hash divisible by primorial
+        unsigned int nHashFactor = PrimorialFast(nPrimorialHashFactor);
+
+        mpz_class mpzHash;
+        while(true) {
+            pblock->nNonce++;
+            if (pblock->nNonce >= 0xffff0000) return false;
+
+            // Check that the hash meets the minimum
+            uint256 phash = pblock->GetHeaderHash();
+            if (UintToArith256(phash) < hashBlockHeaderLimit) //DATACOIN OPTIMIZE?
+                continue;
+
+            mpz_set_uint256(mpzHash.get_mpz_t(), phash);
+            if (nMiningProtocol >= 2) {
+                // Primecoin: Mining protocol v0.2
+                // Try to find hash that is probable prime
+                if (!ProbablePrimalityTestWithTrialDivision(mpzHash, 1000, testParams))
+                    continue;
+            } else {
+                // Primecoin: Check that the hash is divisible by the fixed primorial
+                if (!mpz_divisible_ui_p(mpzHash.get_mpz_t(), nHashFactor))
+                    continue;
+            }
+
+            // Use the hash that passed the tests
+            break;
+        }
+        // Primecoin: primorial fixed multiplier
+        mpz_class mpzPrimorial;
+        mpz_class mpzFixedMultiplier;
+        unsigned int nRoundTests = 0;
+        unsigned int nRoundPrimesHit = 0;
+        int64_t nPrimeTimerStart = GetTimeMicros();
+        Primorial(nPrimorialMultiplier, mpzPrimorial);
+
+        while(true)
+        {
+            unsigned int nTests = 0;
+            unsigned int nPrimesHit = 0;
+            unsigned int vChainsFound[nMaxChainLength];
+            for (unsigned int i = 0; i < nMaxChainLength; i++)
+                vChainsFound[i] = 0;
+
+            // Meter primes/sec
+            static volatile int64_t nPrimeCounter = 0;
+            static volatile int64_t nTestCounter = 0;
+            static volatile double dChainExpected = 0.0;
+            static volatile double dBlockExpected = 0.0;
+            static volatile unsigned int vFoundChainCounter[nMaxChainLength];
+            int64_t nMillisNow = GetTimeMillis();
+            if (nHPSTimerStart == 0)
+            {
+                nHPSTimerStart = nMillisNow;
+                nPrimeCounter = 0;
+                nTestCounter = 0;
+                dChainExpected = 0.0;
+                dBlockExpected = 0.0;
+                for (unsigned int i = 0; i < nMaxChainLength; i++)
+                    vFoundChainCounter[i] = 0;
+            }
+
+            // Primecoin: Mining protocol v0.2
+            if (nMiningProtocol >= 2)
+                mpzFixedMultiplier = mpzPrimorial;
+            else
+            {
+                if (mpzPrimorial > nHashFactor)
+                    mpzFixedMultiplier = mpzPrimorial / nHashFactor;
+                else
+                    mpzFixedMultiplier = 1;
+            }
+
+            // Primecoin: mine for prime chain
+            if (MineProbablePrimeChain(*pblock, mpzFixedMultiplier, fNewBlock, nTests, nPrimesHit, mpzHash, pindexPrev, vChainsFound, sieve, testParams))
+            {
+                nTotalBlocksFound++;
+				return true;
+            }
+            nRoundTests += nTests;
+            nRoundPrimesHit += nPrimesHit;
+
+#ifdef USE_GCC_BUILTINS
+            // Use atomic increment
+            __sync_add_and_fetch(&nPrimeCounter, nPrimesHit);
+            __sync_add_and_fetch(&nTestCounter, nTests);
+            __sync_add_and_fetch(&nTotalTests, nTests);
+            for (unsigned int i = 0; i < nMaxChainLength; i++)
+            {
+                __sync_add_and_fetch(&vTotalChainsFound[i], vChainsFound[i]);
+                __sync_add_and_fetch(&vFoundChainCounter[i], vChainsFound[i]);
+            }
+#else
+            nPrimeCounter += nPrimesHit;
+            nTestCounter += nTests;
+            nTotalTests += nTests;
+            for (unsigned int i = 0; i < nMaxChainLength; i++)
+            {
+                vTotalChainsFound[i] += vChainsFound[i];
+                vFoundChainCounter[i] += vChainsFound[i];
+            }
+#endif
+
+            nMillisNow = GetTimeMillis();
+            if (nMillisNow - nHPSTimerStart > 60000)
+            {
+                LOCK(cs);
+                nMillisNow = GetTimeMillis();
+                if (nMillisNow - nHPSTimerStart > 60000)
+                {
+                    int64_t nTimeDiffMillis = nMillisNow - nHPSTimerStart;
+                    nHPSTimerStart = nMillisNow;
+                    double dPrimesPerMinute = 60000.0 * nPrimeCounter / nTimeDiffMillis;
+                    dPrimesPerSec = dPrimesPerMinute / 60.0;
+                    double dTestsPerMinute = 60000.0 * nTestCounter / nTimeDiffMillis;
+                    dChainsPerDay = 86400000.0 * dChainExpected / nTimeDiffMillis;
+                    dBlocksPerDay = 86400000.0 * dBlockExpected / nTimeDiffMillis;
+                    nPrimeCounter = 0;
+                    nTestCounter = 0;
+                    dChainExpected = 0;
+                    dBlockExpected = 0;
+                    static int64_t nLogTime = 0;
+                    if (nMillisNow - nLogTime > 59000)
+                    {
+                        nLogTime = nMillisNow;
+                        if (fLogTimestamps)
+                            LogPrintf("primemeter %9.0f prime/h %9.0f test/h %3.8f chain/d %3.8f block/d\n", dPrimesPerMinute * 60.0, dTestsPerMinute * 60.0, dChainsPerDay, dBlocksPerDay);
+                        else
+                            LogPrintf("%s primemeter %9.0f prime/h %9.0f test/h %3.8f chain/d %3.8f block/d\n", DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nLogTime / 1000).c_str(), dPrimesPerMinute * 60.0, dTestsPerMinute * 60.0, dChainsPerDay, dBlocksPerDay);
+                        PrintCompactStatistics(vFoundChainCounter);
+                    }
+                }
+            }
+
+            // Check for stop or if block needs to be rebuilt
+            boost::this_thread::interruption_point();
+
+            if (pblock->nNonce >= 0xffff0000) return false;
+            if (fNewBlock)
+            {
+                // Primecoin: a sieve+primality round completes
+                // Primecoin: estimate time to block
+                unsigned int nCalcRoundTests = std::max(1u, nRoundTests);
+                // Make sure the estimated time is very high if only 0 primes were found
+                if (nRoundPrimesHit == 0)
+                    nCalcRoundTests *= 1000;
+                int64_t nRoundTime = (GetTimeMicros() - nPrimeTimerStart); 
+                double dTimeExpected = (double) nRoundTime / nCalcRoundTests;
+                double dRoundChainExpected = (double) nRoundTests;
+                unsigned int nTargetLength = TargetGetLength(pblock->nBits);
+                unsigned int nRequestedLength = nTargetLength;
+                // Override target length if requested
+                if (nSieveTargetLength > 0)
+                    nRequestedLength = nSieveTargetLength;
+                // Calculate expected number of chains for requested length
+                for (unsigned int n = 0; n < nRequestedLength; n++)
+                {
+                    double dPrimeProbability = EstimateCandidatePrimeProbability(nPrimorialMultiplier, n, nMiningProtocol);
+                    dTimeExpected /= dPrimeProbability;
+                    dRoundChainExpected *= dPrimeProbability;
+                }
+                dChainExpected += dRoundChainExpected;
+                // Calculate expected number of blocks
+                double dRoundBlockExpected = dRoundChainExpected;
+                for (unsigned int n = nRequestedLength; n < nTargetLength; n++)
+                {
+                    double dPrimeProbability = EstimateNormalPrimeProbability(nPrimorialMultiplier, n, nMiningProtocol);
+                    dTimeExpected /= dPrimeProbability;
+                    dRoundBlockExpected *= dPrimeProbability;
+                }
+                // Calculate the effect of fractional difficulty
+                double dFractionalDiff = GetPrimeDifficulty(pblock->nBits) - nTargetLength;
+                double dExtraPrimeProbability = EstimateNormalPrimeProbability(nPrimorialMultiplier, nTargetLength, nMiningProtocol);
+                double dDifficultyFactor = ((1.0 - dFractionalDiff) * (1.0 - dExtraPrimeProbability) + dExtraPrimeProbability);
+                dRoundBlockExpected *= dDifficultyFactor;
+                dTimeExpected /= dDifficultyFactor;
+                dBlockExpected += dRoundBlockExpected;
+                // Calculate the sum of expected blocks and time
+                dSumBlockExpected += dRoundBlockExpected;
+                nSumRoundTime += nRoundTime;
+                nRoundNum++;
+                if (nRoundNum >= nRoundSamples)
+                {
+                    // Calculate average expected blocks per time
+                    double dAverageBlockExpected = dSumBlockExpected / ((double) nSumRoundTime / 1000000.0);
+                    // Compare to previous value
+                    if (dAverageBlockExpected > dAverageBlockExpectedPrev)
+                        nAdjustPrimorial = (nPrimorialMultiplier >= nPrimorialMultiplierPrev) ? 1 : -1;
+                    else
+                        nAdjustPrimorial = (nPrimorialMultiplier >= nPrimorialMultiplierPrev) ? -1 : 1;
+                    if (fDebug && gArgs.GetBoolArg("-printprimorial", false))
+                        LogPrintf("DatacoinMiner() : Rounds total: num=%u primorial=%u block/s=%3.12f\n", nRoundNum, nPrimorialMultiplier, dAverageBlockExpected);
+                    // Store the new value and reset
+                    dAverageBlockExpectedPrev = dAverageBlockExpected;
+                    nPrimorialMultiplierPrev = nPrimorialMultiplier;
+                    dSumBlockExpected = 0.0;
+                    nSumRoundTime = 0;
+                    nRoundNum = 0;
+                }
+                if (fDebug && gArgs.GetBoolArg("-printmining", false))
+                {
+                    double dPrimeProbabilityBegin = EstimateCandidatePrimeProbability(nPrimorialMultiplier, 0, nMiningProtocol);
+                    double dPrimeProbabilityEnd = EstimateCandidatePrimeProbability(nPrimorialMultiplier, nTargetLength - 1, nMiningProtocol);
+                    LogPrintf("DatacoinMiner() : Round primorial=%u tests=%u primes=%u time=%uus pprob=%1.6f pprob2=%1.6f pprobextra=%1.6f tochain=%6.3fd expect=%3.12f expectblock=%3.12f\n", nPrimorialMultiplier, nRoundTests, nRoundPrimesHit, (unsigned int) nRoundTime, dPrimeProbabilityBegin, dPrimeProbabilityEnd, dExtraPrimeProbability, ((dTimeExpected/1000000.0))/86400.0, dRoundChainExpected, dRoundBlockExpected);
+                }
+
+                // Primecoin: primorial always needs to be incremented if only 0 primes were found
+                if (nRoundPrimesHit == 0)
+                    nAdjustPrimorial = 1;
+
+                // Primecoin: reset sieve+primality round timer
+                nPrimeTimerStart = GetTimeMicros();
+                nRoundTests = 0;
+                nRoundPrimesHit = 0;
+
+                // Primecoin: update time and nonce
+                //pblock->nTime = std::max(pblock->nTime, (unsigned int) GetAdjustedTime());
+                while(true) {
+                    pblock->nNonce++;
+                    if (pblock->nNonce >= 0xffff0000) return false;
+
+                    // Check that the hash meets the minimum
+                    uint256 phash = pblock->GetHeaderHash();
+                    if (UintToArith256(phash) < hashBlockHeaderLimit) //DATACOIN OPTIMIZE?
+                        continue;
+
+                    mpz_set_uint256(mpzHash.get_mpz_t(), phash);
+                    if (nMiningProtocol >= 2) {
+                        // Primecoin: Mining protocol v0.2
+                        // Try to find hash that is probable prime
+                        if (!ProbablePrimalityTestWithTrialDivision(mpzHash, 1000, testParams))
+                            continue;
+                    } else {
+                        // Primecoin: Check that the hash is divisible by the fixed primorial
+                        if (!mpz_divisible_ui_p(mpzHash.get_mpz_t(), nHashFactor))
+                            continue;
+                    }
+
+                    // Use the hash that passed the tests
+                    break;
+                }
+
+                // Primecoin: dynamic adjustment of primorial multiplier
+                if (nFixedPrimorial == 0 && nAdjustPrimorial != 0) {
+                    if (nAdjustPrimorial > 0)
+                    {
+                        if (!PrimeTableGetNextPrime(nPrimorialMultiplier))
+                            error("DatacoinMiner() : primorial increment overflow");
+                    }
+                    else if (nPrimorialMultiplier > nPrimorialHashFactor)
+                    {
+                        if (!PrimeTableGetPreviousPrime(nPrimorialMultiplier))
+                            error("DatacoinMiner() : primorial decrement overflow");
+                    }
+                    Primorial(nPrimorialMultiplier, mpzPrimorial);
+                    nAdjustPrimorial = 0;
+                }
+            }
+        }
+
+	return false;
+}
+
+void static BitcoinCPUMiner(CWallet *pwallet)
+{
+    static CCriticalSection cs;
+    static bool fTimerStarted = false;
+    bool fPrintStatsAtEnd = false;
+    LogPrintf("DatacoinMiner started\n");
+    SetThreadPriority(THREAD_PRIORITY_LOWEST);
+    RenameThread("datacoin-miner");
+
+    //Each thread has its own key and counter
+    //CReserveKey reservekey(pwallet); //DATACOIN MINER
+    //DATACOIN OPTIMIZE? Реализовать повторные использования адресов 
+    //или майнинг на единый адрес? Большое количество адресов способно замедлить кошелек
+    // ("Implement address reuse or mining to a single address? A large number of addresses can slow down the wallet")
+    std::shared_ptr<CReserveScript> coinbase_script;
+    pwallet->GetScriptForMining(coinbase_script);
+	
+	// If the keypool is exhausted, no script is returned at all.  Catch this.
+    if (!coinbase_script) {
+        LogPrintf("Keypool ran out. Refilling...\n");
+		{
+			LOCK2(cs_main, pwallet->cs_wallet);
+
+			EnsureWalletIsUnlocked(pwallet);
+			// 0 is interpreted by TopUpKeyPool() as the default keypool size given by -keypool
+			pwallet->TopUpKeyPool(0);
+	
+			if (pwallet->GetKeyPoolSize() < 1) {
+				LogPrintf("Error refreshing keypool. Terminating miner thread.\n");
+				return;
+			}
+		}		
+		pwallet->GetScriptForMining(coinbase_script);		
+		if (!coinbase_script) {
+			LogPrintf("Can't get coinbase script from keypool. Terminating miner thread..\n");
+			return;
+		}
+    }
+    //throw an error if no script was provided
+    if (coinbase_script->reserveScript.empty()) {
+        LogPrintf("No coinbase script available. Terminating miner thread..\n");
+		return;
+    }
+
+	
+    unsigned int nExtraNonce = 0;
+
+    unsigned int nPrimorialMultiplier = nPrimorialHashFactor;
+    int nAdjustPrimorial = 1; // increase or decrease primorial factor
+    const unsigned int nRoundSamples = 40; // how many rounds to sample before adjusting primorial
+    double dSumBlockExpected = 0.0; // sum of expected blocks
+    int64_t nSumRoundTime = 0; // sum of round times
+    unsigned int nRoundNum = 0; // number of rounds
+    double dAverageBlockExpectedPrev = 0.0; // previous average expected blocks per second
+    unsigned int nPrimorialMultiplierPrev = nPrimorialMultiplier; // previous primorial factor
+
+    // Primecoin HP: Increase initial primorial
+    if (fTestNet)
+        nPrimorialMultiplier = nInitialPrimorialMultiplierTestnet;
+    else
+        nPrimorialMultiplier = nInitialPrimorialMultiplier;
+
+    // Primecoin: Check if a fixed primorial was requested
+    unsigned int nFixedPrimorial = (unsigned int)gArgs.GetArg("-primorial", 0);
+    if (nFixedPrimorial > 0)
+    {
+        nFixedPrimorial = std::max(nFixedPrimorial, nPrimorialHashFactor);
+        nPrimorialMultiplier = nFixedPrimorial;
+    }
+
+    // Primecoin: Allow choosing the mining protocol version
+    unsigned int nMiningProtocol = (unsigned int)gArgs.GetArg("-miningprotocol", 1);
+
+    // Primecoin: Allocate data structures for mining
+    CSieveOfEratosthenes sieve;
+    CPrimalityTestParams testParams;
+
+    if (!fTimerStarted)
+    {
+        LOCK(cs);
+        if (!fTimerStarted)
+        {
+            fTimerStarted = true;
+            minerTimer.start();
+
+            // First thread will print the stats
+            fPrintStatsAtEnd = true;
+        }
+    }
+
+    // Many machines may be using the same key if they are sharing the same wallet
+    // Make extra nonce unique by setting it to a modulo of the high resolution clock's value
+    const unsigned int nExtraNonceModulo = 10000000;
+    boost::chrono::high_resolution_clock::time_point time_now = boost::chrono::high_resolution_clock::now();
+    boost::chrono::nanoseconds ns_now = boost::chrono::duration_cast<boost::chrono::nanoseconds>(time_now.time_since_epoch());
+    nExtraNonce = ns_now.count() % nExtraNonceModulo;
+
+    // Print the chosen extra nonce for debugging
+    LogPrintf("BitcoinCPUMiner() : Setting initial extra nonce to %u\n", nExtraNonce);
+
+    try { while(true) {
+        while (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)==0)  MilliSleep(1000);
+
+        //
+        // Create new block
+        //
+        unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
+        CBlockIndex* pindexPrev = pindexBestHeader; //chainActive.Tip()
+
+        // pindexBest may be NULL (e.g. when doing a -reindex)
+        if (!pindexPrev) {
+            MilliSleep(1000);
+            continue;
+        }
+
+        //DATACOIN SEGWIT: fMineWitnessTx=false ?
+        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbase_script->reserveScript, false));
+        if (!pblocktemplate.get())
+            return;
+        CBlock *pblock = &pblocktemplate->block;
+        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce, true);
+
+        if (fDebug && gArgs.GetBoolArg("-printmining", false))
+            LogPrintf("Running DatacoinMiner with %u transactions in block (%u bytes)\n", static_cast<unsigned int>(pblock->vtx.size()),
+               static_cast<unsigned int>(::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION)));
+
+        //
+        // Search
+        //
+        int64_t nStart = GetTime();
+        bool fNewBlock = true;
+
+        // Primecoin: try to find hash divisible by primorial
+        unsigned int nHashFactor = PrimorialFast(nPrimorialHashFactor);
+
+        mpz_class mpzHash;
+        while(true) {
+            pblock->nNonce++;
+            if (pblock->nNonce >= 0xffff0000)
+                break;
+
+            // Check that the hash meets the minimum
+            uint256 phash = pblock->GetHeaderHash();
+            if (UintToArith256(phash) < hashBlockHeaderLimit) //DATACOIN OPTIMIZE?
+                continue;
+
+            mpz_set_uint256(mpzHash.get_mpz_t(), phash);
+            if (nMiningProtocol >= 2) {
+                // Primecoin: Mining protocol v0.2
+                // Try to find hash that is probable prime
+                if (!ProbablePrimalityTestWithTrialDivision(mpzHash, 1000, testParams))
+                    continue;
+            } else {
+                // Primecoin: Check that the hash is divisible by the fixed primorial
+                if (!mpz_divisible_ui_p(mpzHash.get_mpz_t(), nHashFactor))
+                    continue;
+            }
+
+            // Use the hash that passed the tests
+            break;
+        }
+        if (pblock->nNonce >= 0xffff0000)
+            continue;
+        // Primecoin: primorial fixed multiplier
+        mpz_class mpzPrimorial;
+        mpz_class mpzFixedMultiplier;
+        unsigned int nRoundTests = 0;
+        unsigned int nRoundPrimesHit = 0;
+        int64_t nPrimeTimerStart = GetTimeMicros();
+        Primorial(nPrimorialMultiplier, mpzPrimorial);
+
+        while(true)
+        {
+            unsigned int nTests = 0;
+            unsigned int nPrimesHit = 0;
+            unsigned int vChainsFound[nMaxChainLength];
+            for (unsigned int i = 0; i < nMaxChainLength; i++)
+                vChainsFound[i] = 0;
+
+            // Meter primes/sec
+            static volatile int64_t nPrimeCounter = 0;
+            static volatile int64_t nTestCounter = 0;
+            static volatile double dChainExpected = 0.0;
+            static volatile double dBlockExpected = 0.0;
+            static volatile unsigned int vFoundChainCounter[nMaxChainLength];
+            int64_t nMillisNow = GetTimeMillis();
+            if (nHPSTimerStart == 0)
+            {
+                nHPSTimerStart = nMillisNow;
+                nPrimeCounter = 0;
+                nTestCounter = 0;
+                dChainExpected = 0.0;
+                dBlockExpected = 0.0;
+                for (unsigned int i = 0; i < nMaxChainLength; i++)
+                    vFoundChainCounter[i] = 0;
+            }
+
+            // Primecoin: Mining protocol v0.2
+            if (nMiningProtocol >= 2)
+                mpzFixedMultiplier = mpzPrimorial;
+            else
+            {
+                if (mpzPrimorial > nHashFactor)
+                    mpzFixedMultiplier = mpzPrimorial / nHashFactor;
+                else
+                    mpzFixedMultiplier = 1;
+            }
+
+            // Primecoin: mine for prime chain
+            if (MineProbablePrimeChain(*pblock, mpzFixedMultiplier, fNewBlock, nTests, nPrimesHit, mpzHash, pindexPrev, vChainsFound, sieve, testParams))
+            {
+                SetThreadPriority(THREAD_PRIORITY_NORMAL);
+                nTotalBlocksFound++;
+                CheckWork(pblock, *pwallet, coinbase_script); //TODO: pwalletMain?
+                SetThreadPriority(THREAD_PRIORITY_LOWEST);
+            }
+            nRoundTests += nTests;
+            nRoundPrimesHit += nPrimesHit;
+
+#ifdef USE_GCC_BUILTINS
+            // Use atomic increment
+            __sync_add_and_fetch(&nPrimeCounter, nPrimesHit);
+            __sync_add_and_fetch(&nTestCounter, nTests);
+            __sync_add_and_fetch(&nTotalTests, nTests);
+            for (unsigned int i = 0; i < nMaxChainLength; i++)
+            {
+                __sync_add_and_fetch(&vTotalChainsFound[i], vChainsFound[i]);
+                __sync_add_and_fetch(&vFoundChainCounter[i], vChainsFound[i]);
+            }
+#else
+            nPrimeCounter += nPrimesHit;
+            nTestCounter += nTests;
+            nTotalTests += nTests;
+            for (unsigned int i = 0; i < nMaxChainLength; i++)
+            {
+                vTotalChainsFound[i] += vChainsFound[i];
+                vFoundChainCounter[i] += vChainsFound[i];
+            }
+#endif
+
+            nMillisNow = GetTimeMillis();
+            if (nMillisNow - nHPSTimerStart > 60000)
+            {
+                LOCK(cs);
+                nMillisNow = GetTimeMillis();
+                if (nMillisNow - nHPSTimerStart > 60000)
+                {
+                    int64_t nTimeDiffMillis = nMillisNow - nHPSTimerStart;
+                    nHPSTimerStart = nMillisNow;
+                    double dPrimesPerMinute = 60000.0 * nPrimeCounter / nTimeDiffMillis;
+                    dPrimesPerSec = dPrimesPerMinute / 60.0;
+                    double dTestsPerMinute = 60000.0 * nTestCounter / nTimeDiffMillis;
+                    dChainsPerDay = 86400000.0 * dChainExpected / nTimeDiffMillis;
+                    dBlocksPerDay = 86400000.0 * dBlockExpected / nTimeDiffMillis;
+                    nPrimeCounter = 0;
+                    nTestCounter = 0;
+                    dChainExpected = 0;
+                    dBlockExpected = 0;
+                    static int64_t nLogTime = 0;
+                    if (nMillisNow - nLogTime > 59000)
+                    {
+                        nLogTime = nMillisNow;
+                        if (fLogTimestamps)
+                            LogPrintf("primemeter %9.0f prime/h %9.0f test/h %3.8f chain/d %3.8f block/d\n", dPrimesPerMinute * 60.0, dTestsPerMinute * 60.0, dChainsPerDay, dBlocksPerDay);
+                        else
+                            LogPrintf("%s primemeter %9.0f prime/h %9.0f test/h %3.8f chain/d %3.8f block/d\n", DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nLogTime / 1000).c_str(), dPrimesPerMinute * 60.0, dTestsPerMinute * 60.0, dChainsPerDay, dBlocksPerDay);
+                        PrintCompactStatistics(vFoundChainCounter);
+                    }
+                }
+            }
+
+            // Check for stop or if block needs to be rebuilt
+            boost::this_thread::interruption_point();
+            if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)==0)
+                break;
+            if (pblock->nNonce >= 0xffff0000)
+                break;
+            if (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast && GetTime() - nStart > 10)
+                break;
+            if (pindexPrev != pindexBestHeader)
+                break;
+            if (fNewBlock)
+            {
+                // Primecoin: a sieve+primality round completes
+                // Primecoin: estimate time to block
+                unsigned int nCalcRoundTests = std::max(1u, nRoundTests);
+                // Make sure the estimated time is very high if only 0 primes were found
+                if (nRoundPrimesHit == 0)
+                    nCalcRoundTests *= 1000;
+                int64_t nRoundTime = (GetTimeMicros() - nPrimeTimerStart); 
+                double dTimeExpected = (double) nRoundTime / nCalcRoundTests;
+                double dRoundChainExpected = (double) nRoundTests;
+                unsigned int nTargetLength = TargetGetLength(pblock->nBits);
+                unsigned int nRequestedLength = nTargetLength;
+                // Override target length if requested
+                if (nSieveTargetLength > 0)
+                    nRequestedLength = nSieveTargetLength;
+                // Calculate expected number of chains for requested length
+                for (unsigned int n = 0; n < nRequestedLength; n++)
+                {
+                    double dPrimeProbability = EstimateCandidatePrimeProbability(nPrimorialMultiplier, n, nMiningProtocol);
+                    dTimeExpected /= dPrimeProbability;
+                    dRoundChainExpected *= dPrimeProbability;
+                }
+                dChainExpected += dRoundChainExpected;
+                // Calculate expected number of blocks
+                double dRoundBlockExpected = dRoundChainExpected;
+                for (unsigned int n = nRequestedLength; n < nTargetLength; n++)
+                {
+                    double dPrimeProbability = EstimateNormalPrimeProbability(nPrimorialMultiplier, n, nMiningProtocol);
+                    dTimeExpected /= dPrimeProbability;
+                    dRoundBlockExpected *= dPrimeProbability;
+                }
+                // Calculate the effect of fractional difficulty
+                double dFractionalDiff = GetPrimeDifficulty(pblock->nBits) - nTargetLength;
+                double dExtraPrimeProbability = EstimateNormalPrimeProbability(nPrimorialMultiplier, nTargetLength, nMiningProtocol);
+                double dDifficultyFactor = ((1.0 - dFractionalDiff) * (1.0 - dExtraPrimeProbability) + dExtraPrimeProbability);
+                dRoundBlockExpected *= dDifficultyFactor;
+                dTimeExpected /= dDifficultyFactor;
+                dBlockExpected += dRoundBlockExpected;
+                // Calculate the sum of expected blocks and time
+                dSumBlockExpected += dRoundBlockExpected;
+                nSumRoundTime += nRoundTime;
+                nRoundNum++;
+                if (nRoundNum >= nRoundSamples)
+                {
+                    // Calculate average expected blocks per time
+                    double dAverageBlockExpected = dSumBlockExpected / ((double) nSumRoundTime / 1000000.0);
+                    // Compare to previous value
+                    if (dAverageBlockExpected > dAverageBlockExpectedPrev)
+                        nAdjustPrimorial = (nPrimorialMultiplier >= nPrimorialMultiplierPrev) ? 1 : -1;
+                    else
+                        nAdjustPrimorial = (nPrimorialMultiplier >= nPrimorialMultiplierPrev) ? -1 : 1;
+                    if (fDebug && gArgs.GetBoolArg("-printprimorial", false))
+                        LogPrintf("DatacoinMiner() : Rounds total: num=%u primorial=%u block/s=%3.12f\n", nRoundNum, nPrimorialMultiplier, dAverageBlockExpected);
+                    // Store the new value and reset
+                    dAverageBlockExpectedPrev = dAverageBlockExpected;
+                    nPrimorialMultiplierPrev = nPrimorialMultiplier;
+                    dSumBlockExpected = 0.0;
+                    nSumRoundTime = 0;
+                    nRoundNum = 0;
+                }
+                if (fDebug && gArgs.GetBoolArg("-printmining", false))
+                {
+                    double dPrimeProbabilityBegin = EstimateCandidatePrimeProbability(nPrimorialMultiplier, 0, nMiningProtocol);
+                    double dPrimeProbabilityEnd = EstimateCandidatePrimeProbability(nPrimorialMultiplier, nTargetLength - 1, nMiningProtocol);
+                    LogPrintf("DatacoinMiner() : Round primorial=%u tests=%u primes=%u time=%uus pprob=%1.6f pprob2=%1.6f pprobextra=%1.6f tochain=%6.3fd expect=%3.12f expectblock=%3.12f\n", nPrimorialMultiplier, nRoundTests, nRoundPrimesHit, (unsigned int) nRoundTime, dPrimeProbabilityBegin, dPrimeProbabilityEnd, dExtraPrimeProbability, ((dTimeExpected/1000000.0))/86400.0, dRoundChainExpected, dRoundBlockExpected);
+                }
+
+                // Primecoin: primorial always needs to be incremented if only 0 primes were found
+                if (nRoundPrimesHit == 0)
+                    nAdjustPrimorial = 1;
+
+                // Primecoin: reset sieve+primality round timer
+                nPrimeTimerStart = GetTimeMicros();
+                nRoundTests = 0;
+                nRoundPrimesHit = 0;
+
+                // Primecoin: update time and nonce
+                pblock->nTime = std::max(pblock->nTime, (unsigned int) GetAdjustedTime());
+                while(true) {
+                    pblock->nNonce++;
+                    if (pblock->nNonce >= 0xffff0000)
+                        break;
+
+                    // Check that the hash meets the minimum
+                    uint256 phash = pblock->GetHeaderHash();
+                    if (UintToArith256(phash) < hashBlockHeaderLimit) //DATACOIN OPTIMIZE?
+                        continue;
+
+                    mpz_set_uint256(mpzHash.get_mpz_t(), phash);
+                    if (nMiningProtocol >= 2) {
+                        // Primecoin: Mining protocol v0.2
+                        // Try to find hash that is probable prime
+                        if (!ProbablePrimalityTestWithTrialDivision(mpzHash, 1000, testParams))
+                            continue;
+                    } else {
+                        // Primecoin: Check that the hash is divisible by the fixed primorial
+                        if (!mpz_divisible_ui_p(mpzHash.get_mpz_t(), nHashFactor))
+                            continue;
+                    }
+
+                    // Use the hash that passed the tests
+                    break;
+                }
+                if (pblock->nNonce >= 0xffff0000)
+                    break;
+
+                // Primecoin: dynamic adjustment of primorial multiplier
+                if (nFixedPrimorial == 0 && nAdjustPrimorial != 0) {
+                    if (nAdjustPrimorial > 0)
+                    {
+                        if (!PrimeTableGetNextPrime(nPrimorialMultiplier))
+                            error("DatacoinMiner() : primorial increment overflow");
+                    }
+                    else if (nPrimorialMultiplier > nPrimorialHashFactor)
+                    {
+                        if (!PrimeTableGetPreviousPrime(nPrimorialMultiplier))
+                            error("DatacoinMiner() : primorial decrement overflow");
+                    }
+                    Primorial(nPrimorialMultiplier, mpzPrimorial);
+                    nAdjustPrimorial = 0;
+                }
+            }
+        }
+
+    } }
+    catch (boost::thread_interrupted)
+    {
+        LogPrintf("DatacoinMiner terminated\n");
+        // Print statistics
+        if (fPrintStatsAtEnd)
+        {
+            PrintMinerStatistics();
+            fTimerStarted = false;
+        }
+        throw;
+    }
+}
+
+void GenerateBitcoins(bool fGenerate, CWallet* pwallet)
+{
+//    static boost::thread_group* minerThreads = NULL;
+//    
+//    int nThreads = gArgs.GetArg("-genproclimit", -1);
+//    if (nThreads < 0)
+//        nThreads = boost::thread::hardware_concurrency();
+//    
+//    if (minerThreads != NULL)
+//    {
+//		LogPrintf("DatacoinMiner threads: START TERMINATING\n");
+//        minerThreads->interrupt_all();
+//		//Лучше пусть грохнутся майнерные потоки, чем зависнуть здесь и не завершить грамотно остальное
+        // ("It is better to let the miner flows crash than hang here and not complete the rest correctly")
+//		//minerThreads->join_all();
+//		//LogPrintf("DatacoinMiner threads: COMPLETED TERMINATING\n");
+//		//интересно можно ли тут сразу вызывать деструктор
+//      //("I wonder if you can immediately call the destructor")
+//        delete minerThreads;
+//        minerThreads = NULL;
+//    }
+//    
+//    if (nThreads == 0 || !fGenerate)
+//        return;
+//    
+//    minerThreads = new boost::thread_group();
+//    for (int i = 0; i < nThreads; i++)
+//        minerThreads->create_thread(boost::bind(&BitcoinCPUMiner, pwallet));
+	//DATACOIN POOL
+    LogPrintf("[PrimeServer] GenerateBitcoins: %s\n", fGenerate ? "true" : "false");
+	
+    if(gPrimeServer && !fGenerate){
+    	
+    	delete gPrimeServer;
+    	gPrimeServer = nullptr;
+    	
+    }
+    
+    if(fGenerate && !gPrimeServer){
+    	
+    	gPrimeServer = PrimeServer::CreateServer(pwallet);
+    	gPrimeServer->NotifyNewBlock(chainActive.Tip());
+    	
+//#ifndef WIN32
+//    	struct sigaction sa;
+//		sa.sa_handler = HandleSIGTERM;
+//		sigemptyset(&sa.sa_mask);
+//		sa.sa_flags = 0;
+//		sigaction(SIGTERM, &sa, NULL);
+//		sigaction(SIGINT, &sa, NULL);
+//#endif
+  	
+     }
 }

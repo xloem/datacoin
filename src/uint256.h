@@ -90,6 +90,17 @@ public:
                ((uint64_t)ptr[6]) << 48 | \
                ((uint64_t)ptr[7]) << 56;
     }
+	
+	double getdouble() const
+    {
+        double ret = 0.0;
+        double fact = 1.0;
+        for (int i = 0; i < WIDTH; i++) {
+            ret += fact * data[i];
+            fact *= 256.0;
+        }
+        return ret;
+    }
 
     template<typename Stream>
     void Serialize(Stream& s) const
@@ -132,6 +143,13 @@ public:
     uint64_t GetCheapHash() const
     {
         return ReadLE64(data);
+    }
+	
+	uint256(uint64_t b)
+    {
+        *(uint64_t*)data = b;
+        for (int i = 8; i < WIDTH; i++)
+            data[i] = 0;
     }
 };
 

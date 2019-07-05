@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2016 The Bitcoin Core developers
+// Copyright (c) 2013 The Primecoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,6 +26,7 @@
 #include "utilstrencodings.h"
 #include "validationinterface.h"
 #include "warnings.h"
+#include "prime/prime.h"
 
 #include <memory>
 #include <stdint.h>
@@ -41,69 +43,137 @@ unsigned int ParseConfirmTarget(const UniValue& value)
     return (unsigned int)target;
 }
 
-/**
- * Return average network hashes per second based on the last 'lookup' blocks,
- * or from the last difficulty change if 'lookup' is nonpositive.
- * If 'height' is nonnegative, compute the estimate at the time when a given block was found.
- */
-UniValue GetNetworkHashPS(int lookup, int height) {
-    CBlockIndex *pb = chainActive.Tip();
+UniValue getsievesize(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 0)
+        throw std::runtime_error(
+            "getsievesize\n"
+            "Returns the current sieve size used by the mining algorithm.");
 
-    if (height >= 0 && height < chainActive.Height())
-        pb = chainActive[height];
+    return (boost::int64_t)nSieveSize;
+}
 
-    if (pb == nullptr || !pb->nHeight)
-        return 0;
-
-    // If lookup is -1, then use blocks since last difficulty change.
-    if (lookup <= 0)
-        lookup = pb->nHeight % Params().GetConsensus().DifficultyAdjustmentInterval() + 1;
-
-    // If lookup is larger than chain, then set it to chain length.
-    if (lookup > pb->nHeight)
-        lookup = pb->nHeight;
-
-    CBlockIndex *pb0 = pb;
-    int64_t minTime = pb0->GetBlockTime();
-    int64_t maxTime = minTime;
-    for (int i = 0; i < lookup; i++) {
-        pb0 = pb0->pprev;
-        int64_t time = pb0->GetBlockTime();
-        minTime = std::min(time, minTime);
-        maxTime = std::max(time, maxTime);
+UniValue setgenerate(const JSONRPCRequest& request)
+{
+	CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
     }
 
-    // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
-    if (minTime == maxTime)
-        return 0;
-
-    arith_uint256 workDiff = pb->nChainWork - pb0->nChainWork;
-    int64_t timeDiff = maxTime - minTime;
-
-    return workDiff.getdouble() / timeDiff;
-}
-
-UniValue getnetworkhashps(const JSONRPCRequest& request)
-{
-    if (request.fHelp || request.params.size() > 2)
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 2)
         throw std::runtime_error(
-            "getnetworkhashps ( nblocks height )\n"
-            "\nReturns the estimated network hashes per second based on the last n blocks.\n"
-            "Pass in [blocks] to override # of blocks, -1 specifies since last difficulty change.\n"
-            "Pass in [height] to estimate the network speed at the time when a certain block was found.\n"
-            "\nArguments:\n"
-            "1. nblocks     (numeric, optional, default=120) The number of blocks, or -1 for blocks since last difficulty change.\n"
-            "2. height      (numeric, optional, default=-1) To estimate at the time of the given height.\n"
-            "\nResult:\n"
-            "x             (numeric) Hashes per second estimated\n"
-            "\nExamples:\n"
-            + HelpExampleCli("getnetworkhashps", "")
-            + HelpExampleRpc("getnetworkhashps", "")
-       );
+            "setgenerate <generate> [genproclimit]\n"
+            "<generate> is true or false to turn generation on or off.\n"
+            "Generation is limited to [genproclimit] processors, -1 is unlimited.");
 
-    LOCK(cs_main);
-    return GetNetworkHashPS(!request.params[0].isNull() ? request.params[0].get_int() : 120, !request.params[1].isNull() ? request.params[1].get_int() : -1);
+    bool fGenerate = true;
+    if (request.params.size() > 0)
+        fGenerate = request.params[0].get_bool();
+
+    if (request.params.size() > 1)
+    {
+        int nGenProcLimit = request.params[1].get_int();
+        gArgs.ForceSetArg("-genproclimit", itostr(nGenProcLimit));
+        if (nGenProcLimit == 0)
+            fGenerate = false;
+    }
+    gArgs.ForceSetArg("-gen", fGenerate ? "1" : "0");
+
+    GenerateBitcoins(fGenerate, pwallet);
+    return UniValue::VNULL;
+	
 }
+
+UniValue setsievesize(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() < 1)
+        throw std::runtime_error(
+            "setsievesize <sievesize>\n"
+            "<sievesize> determines how many numbers are sieved at one time.");
+
+    unsigned int nSize = nDefaultSieveSize;
+    if (request.params.size() > 0)
+        nSize = request.params[0].get_int();
+
+    nSize = std::max(std::min(nSize, nMaxSieveSize), nMinSieveSize);
+
+    nSieveSize = nSize;
+    return UniValue::VNULL;
+}
+
+
+UniValue getsievefilterprimes(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 0)
+        throw std::runtime_error(
+            "getsievefilterprimes\n"
+            "Returns the current number of primes that are filtered out by the sieve.");
+
+    return (boost::int64_t)nSieveFilterPrimes;
+}
+
+
+UniValue setsievefilterprimes(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() < 1)
+        throw std::runtime_error(
+            "setsievefilterprimes <number of primes>\n"
+            "<number of primes> determines how many primes are filtered out by the sieve.");
+
+    unsigned int nPrimes = nDefaultSieveFilterPrimes;
+    if (request.params.size() > 0)
+        nPrimes = request.params[0].get_int();
+
+    nPrimes = std::max(std::min(nPrimes, nMaxSieveFilterPrimes), nMinSieveFilterPrimes);
+
+    nSieveFilterPrimes = nPrimes;
+    return UniValue::VNULL;
+}
+
+
+UniValue getsieveextensions(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 0)
+        throw std::runtime_error(
+            "getsieveextensions\n"
+            "Returns the number of times the sieve is extended.");
+
+    return (boost::int64_t)nSieveExtensions;
+}
+
+
+UniValue setsieveextensions(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() < 1)
+        throw std::runtime_error(
+            "setsieveextensions <sieveextensions>\n"
+            "<sieveextensions> determines the number of times the sieve will be extended.");
+
+    unsigned int nExtensions = (fTestNet) ? nDefaultSieveExtensionsTestnet : nDefaultSieveExtensions;
+    if (request.params.size() > 0)
+        nExtensions = request.params[0].get_int();
+
+    nExtensions = std::max(std::min(nExtensions, nMaxSieveExtensions), nMinSieveExtensions);
+
+    nSieveExtensions = nExtensions;
+    return UniValue::VNULL;
+}
+
+
+UniValue getprimespersec(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() != 0)
+        throw std::runtime_error(
+            "getprimespersec\n"
+            "Returns a recent primes per second performance measurement while generating.");
+
+    return (boost::int64_t)dPrimesPerSec;
+}
+
+
+extern UniValue getdifficulty(const JSONRPCRequest& request);
+
+
 
 UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGenerate, uint64_t nMaxTries, bool keepScript)
 {
@@ -128,7 +198,7 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
             LOCK(cs_main);
             IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
         }
-        while (nMaxTries > 0 && pblock->nNonce < nInnerLoopCount && !CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) {
+        while (nMaxTries > 0 && pblock->nNonce < nInnerLoopCount && !CheckProofOfWork(pblock->GetHeaderHash(), pblock->nBits, Params().GetConsensus(), pblock->bnPrimeChainMultiplier, pblock->nPrimeChainType, pblock->nPrimeChainLength)) {
             ++pblock->nNonce;
             --nMaxTries;
         }
@@ -161,7 +231,7 @@ UniValue generatetoaddress(const JSONRPCRequest& request)
             "\nMine blocks immediately to a specified address (before the RPC call returns)\n"
             "\nArguments:\n"
             "1. nblocks      (numeric, required) How many blocks are generated immediately.\n"
-            "2. address      (string, required) The address to send the newly generated bitcoin to.\n"
+            "2. address      (string, required) The address to send the newly generated datacoin to.\n"
             "3. maxtries     (numeric, optional) How many iterations to try (default = 1000000).\n"
             "\nResult:\n"
             "[ blockhashes ]     (array) hashes of blocks generated\n"
@@ -193,21 +263,6 @@ UniValue getmininginfo(const JSONRPCRequest& request)
         throw std::runtime_error(
             "getmininginfo\n"
             "\nReturns a json object containing mining-related information."
-            "\nResult:\n"
-            "{\n"
-            "  \"blocks\": nnn,             (numeric) The current block\n"
-            "  \"currentblockweight\": nnn, (numeric) The last block weight\n"
-            "  \"currentblocktx\": nnn,     (numeric) The last block transaction\n"
-            "  \"difficulty\": xxx.xxxxx    (numeric) The current difficulty\n"
-            "  \"networkhashps\": nnn,      (numeric) The network hashes per second\n"
-            "  \"pooledtx\": n              (numeric) The size of the mempool\n"
-            "  \"chain\": \"xxxx\",           (string) current network name as defined in BIP70 (main, test, regtest)\n"
-            "  \"warnings\": \"...\"          (string) any network and blockchain warnings\n"
-            "  \"errors\": \"...\"            (string) DEPRECATED. Same as warnings. Only shown when bitcoind is started with -deprecatedrpc=getmininginfo\n"
-            "}\n"
-            "\nExamples:\n"
-            + HelpExampleCli("getmininginfo", "")
-            + HelpExampleRpc("getmininginfo", "")
         );
 
 
@@ -215,11 +270,18 @@ UniValue getmininginfo(const JSONRPCRequest& request)
 
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("blocks",           (int)chainActive.Height()));
+    obj.push_back(Pair("blocksperday",  dBlocksPerDay));
+    obj.push_back(Pair("chainsperday",  dChainsPerDay));
     obj.push_back(Pair("currentblockweight", (uint64_t)nLastBlockWeight));
     obj.push_back(Pair("currentblocktx",   (uint64_t)nLastBlockTx));
-    obj.push_back(Pair("difficulty",       (double)GetDifficulty()));
-    obj.push_back(Pair("networkhashps",    getnetworkhashps(request)));
+    obj.push_back(Pair("difficulty",       getdifficulty(request)));
+    //obj.push_back(Pair("networkhashps",    getnetworkhashps(request)));
     obj.push_back(Pair("pooledtx",         (uint64_t)mempool.size()));
+    obj.push_back(Pair("generate",      (bool)gArgs.GetBoolArg("-gen", false))); //DATACOIN ADDED
+    obj.push_back(Pair("genproclimit",  (int)gArgs.GetArg("-genproclimit", -1))); //DATACOIN ADDED
+    obj.push_back(Pair("sieveextensions",(int)nSieveExtensions));
+    obj.push_back(Pair("sievefilterprimes",(int)nSieveFilterPrimes));
+    obj.push_back(Pair("sievesize",     (int)nSieveSize));
     obj.push_back(Pair("chain",            Params().NetworkIDString()));
     if (IsDeprecatedRPCEnabled("getmininginfo")) {
         obj.push_back(Pair("errors",       GetWarnings("statusbar")));
@@ -444,10 +506,10 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, "Error: Peer-to-peer functionality missing or disabled");
 
     if (g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL) == 0)
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Bitcoin is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Datacoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Bitcoin is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Datacoin is downloading blocks...");
 
     static unsigned int nTransactionsUpdatedLast;
 
@@ -796,7 +858,7 @@ UniValue estimatefee(const JSONRPCRequest& request)
 
     if (!IsDeprecatedRPCEnabled("estimatefee")) {
         throw JSONRPCError(RPC_METHOD_DEPRECATED, "estimatefee is deprecated and will be fully removed in v0.17. "
-            "To use estimatefee in v0.16, restart bitcoind with -deprecatedrpc=estimatefee.\n"
+            "To use estimatefee in v0.16, restart datacoind with -deprecatedrpc=estimatefee.\n"
             "Projects should transition to using estimatesmartfee before upgrading to v0.17");
     }
 
@@ -979,12 +1041,20 @@ UniValue estimaterawfee(const JSONRPCRequest& request)
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
-    { "mining",             "getnetworkhashps",       &getnetworkhashps,       {"nblocks","height"} },
+  //  { "mining",             "getnetworkhashps",       &getnetworkhashps,       {"nblocks","height"} },
     { "mining",             "getmininginfo",          &getmininginfo,          {} },
     { "mining",             "prioritisetransaction",  &prioritisetransaction,  {"txid","dummy","fee_delta"} },
     { "mining",             "getblocktemplate",       &getblocktemplate,       {"template_request"} },
     { "mining",             "submitblock",            &submitblock,            {"hexdata","dummy"} },
 
+    { "mining",             "setgenerate",            &setgenerate,            {"generate", "genproclimit"} },
+    { "mining",             "getsievesize",           &getsievesize,           {} },
+    { "mining",             "setsievesize",           &setsievesize,           {"sievesize"} },
+    { "mining",             "getsievefilterprimes",   &getsievefilterprimes,   {} },
+    { "mining",             "setsievefilterprimes",   &setsievefilterprimes,   {"number_of_primes"} },
+    { "mining",             "getsieveextensions",     &getsieveextensions,     {} },
+    { "mining",             "setsieveextensions",     &setsieveextensions,     {"sieveextensions"} },
+    { "mining",             "getprimespersec",        &getprimespersec,        {} },
 
     { "generating",         "generatetoaddress",      &generatetoaddress,      {"nblocks","address","maxtries"} },
 

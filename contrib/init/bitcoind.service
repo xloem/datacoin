@@ -1,15 +1,15 @@
 [Unit]
-Description=Bitcoin's distributed currency daemon
+Description=Datacoin's distributed currency daemon
 After=network.target
 
 [Service]
-User=bitcoin
-Group=bitcoin
+User=datacoin
+Group=datacoin
 
 Type=forking
-PIDFile=/var/lib/bitcoind/bitcoind.pid
-ExecStart=/usr/bin/bitcoind -daemon -pid=/var/lib/bitcoind/bitcoind.pid \
--conf=/etc/bitcoin/bitcoin.conf -datadir=/var/lib/bitcoind -disablewallet
+PIDFile=/var/lib/datacoind/datacoind.pid
+ExecStart=/usr/bin/datacoind -daemon -pid=/var/lib/datacoind/datacoind.pid \
+-conf=/etc/datacoin/datacoin.conf -datadir=/var/lib/datacoind -disablewallet
 
 Restart=always
 PrivateTmp=true
