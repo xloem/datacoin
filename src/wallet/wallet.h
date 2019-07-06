@@ -18,6 +18,7 @@
 #include <wallet/crypter.h>
 #include <wallet/walletdb.h>
 #include <wallet/rpcwallet.h>
+#include <consensus/consensus.h>
 
 #include <algorithm>
 #include <atomic>

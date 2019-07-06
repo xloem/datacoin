@@ -11,6 +11,7 @@
 #include <script/script.h>
 #include <serialize.h>
 #include <uint256.h>
+#include <utilstrencodings.h>
 
 static const int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
 
@@ -364,6 +365,8 @@ public:
     }
 
     std::string ToString() const;
+    int64_t GetOpRetFee() const;
+    void UpdateHash() const;
 
     bool HasWitness() const
     {
@@ -410,6 +413,10 @@ struct CMutableTransaction
      * fly, as opposed to GetHash() in CTransaction, which uses a cached result.
      */
     uint256 GetHash() const;
+
+    /* TODO: test get of inscription fees
+     */
+    int64_t GetOpRetFee() const;
 
     friend bool operator==(const CMutableTransaction& a, const CMutableTransaction& b)
     {

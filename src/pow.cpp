@@ -35,7 +35,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if (!TargetGetNext(pindexPrev->nBits, nInterval, params.nPowTargetSpacing, nActualSpacing, nBits))
         return error("GetNextWorkRequired() : failed to get next target");
 
-    if (fDebug && gArgs.GetBoolArg("-printtarget", false))
+    if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printtarget", false))
         LogPrintf("GetNextWorkRequired() : lastindex=%u prev=0x%08x new=0x%08x\n",
             pindexLast->nHeight, pindexPrev->nBits, nBits);
     return nBits;

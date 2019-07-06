@@ -193,7 +193,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblocktemplate->vTxFees[0] = -nFees;
 	
 
-    if (fDebug || gArgs.GetBoolArg("-printmining", false) || !gArgs.GetBoolArg("-gen", false))
+    if ((gArgs.IsArgSet("-debug")) || gArgs.GetBoolArg("-printmining", false) || !gArgs.GetBoolArg("-gen", false))
         LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
 
     // Fill in header
@@ -377,7 +377,7 @@ void BlockAssembler::addPackageTxs(int &nPackagesSelected, int &nDescendantsUpda
             // Try to compare the mapTx entry to the mapModifiedTx entry
             iter = mempool.mapTx.project<0>(mi);
             if (modit != mapModifiedTx.get<ancestor_score>().end() &&
-                    CompareTxMemPoolEntryByAncestorFee()(*modit, CTxMemPoolModifiedEntry(iter))) {
+                    CompareModifiedEntry()(*modit, CTxMemPoolModifiedEntry(iter))) {
                 // The best entry in mapModifiedTx has higher score
                 // than the one from mapTx.
                 // Switch which transaction (package) to consider
@@ -504,12 +504,6 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, std::shared_ptr<CReserveScript> 
         if (pblock->hashPrevBlock != pindexBestHeader->GetBlockHash())// pcoinsTip->GetBestBlock()) //TODO: chainActive.Tip()->GetBlockHash()?
             return error("DatacoinMiner : generated block is stale");
 
-        // Track how many getdata requests this block gets
-        {
-            LOCK(wallet.cs_wallet);
-            wallet.mapRequestCount[pblock->GetHash()] = 0;
-        }
-
         // Process this block the same as if we had received it from another node
         //CValidationState state;
 		bool fNewBlock;
@@ -575,7 +569,7 @@ bool MiniMiner(CBlock *pblock, CBlockIndex* pindexPrev, bool allowIncrementExtra
 
         if (allowIncrementExtraNonce) IncrementExtraNonce(pblock, pindexPrev, nExtraNonce, true);
 
-        if (fDebug && gArgs.GetBoolArg("-printmining", false))
+        if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining", false))
             LogPrintf("Running DatacoinMiner with %u transactions in block (%u bytes)\n", static_cast<unsigned int>(pblock->vtx.size()),
                static_cast<unsigned int>(::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION)));
 
@@ -771,7 +765,7 @@ bool MiniMiner(CBlock *pblock, CBlockIndex* pindexPrev, bool allowIncrementExtra
                         nAdjustPrimorial = (nPrimorialMultiplier >= nPrimorialMultiplierPrev) ? 1 : -1;
                     else
                         nAdjustPrimorial = (nPrimorialMultiplier >= nPrimorialMultiplierPrev) ? -1 : 1;
-                    if (fDebug && gArgs.GetBoolArg("-printprimorial", false))
+                    if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printprimorial", false))
                         LogPrintf("DatacoinMiner() : Rounds total: num=%u primorial=%u block/s=%3.12f\n", nRoundNum, nPrimorialMultiplier, dAverageBlockExpected);
                     // Store the new value and reset
                     dAverageBlockExpectedPrev = dAverageBlockExpected;
@@ -780,7 +774,7 @@ bool MiniMiner(CBlock *pblock, CBlockIndex* pindexPrev, bool allowIncrementExtra
                     nSumRoundTime = 0;
                     nRoundNum = 0;
                 }
-                if (fDebug && gArgs.GetBoolArg("-printmining", false))
+                if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining", false))
                 {
                     double dPrimeProbabilityBegin = EstimateCandidatePrimeProbability(nPrimorialMultiplier, 0, nMiningProtocol);
                     double dPrimeProbabilityEnd = EstimateCandidatePrimeProbability(nPrimorialMultiplier, nTargetLength - 1, nMiningProtocol);

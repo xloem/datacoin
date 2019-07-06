@@ -2,9 +2,10 @@
 // Distributed under conditional MIT/X11 software license,
 // see the accompanying file COPYING
 
-#include "prime.h"
-#include "miner.h"
-#include "validation.h"
+#include <prime/prime.h>
+#include <miner.h>
+#include <validation.h>
+#include <util.h>
 #include <climits>
 
 /**********************/
@@ -357,7 +358,7 @@ bool TargetGetNext(unsigned int nBits, int64_t nInterval, int64_t nTargetSpacing
     if (bnFractionalDifficulty < nFractionalDifficultyMin)
         bnFractionalDifficulty = nFractionalDifficultyMin;
     uint64_t nFractionalDifficultyNew = bnFractionalDifficulty.getuint256().GetUint64(0);
-    if (fDebug && gArgs.GetBoolArg("-printtarget", false))
+    if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printtarget", false))
         LogPrintf("TargetGetNext() : nActualSpacing=%d nFractionDiff=%016llx nFractionDiffNew=%016llx\n", (int)nActualSpacing, (long long unsigned int)nFractionalDifficulty, (long long unsigned int)nFractionalDifficultyNew);
     // Step up length if fractional past threshold
     if (nFractionalDifficultyNew > nFractionalDifficultyThreshold)
@@ -919,16 +920,16 @@ bool MineProbablePrimeChain(CBlock& block, mpz_class& mpzFixedMultiplier, bool& 
     if (!sieve.IsReady() || sieve.IsDepleted())
     {
         // Build sieve
-        if (fDebug && gArgs.GetBoolArg("-printmining", false))
+        if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining", false))
             nStart = GetTimeMicros();
         sieve.Reset(nSieveSize, nSieveFilterPrimes, nSieveExtensions, nL1CacheSize, nBits, mpzHash, mpzFixedMultiplier, pindexPrev);
         sieve.Weave();
-        if (fDebug && gArgs.GetBoolArg("-printmining", false))
+        if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining", false))
             LogPrintf("MineProbablePrimeChain() : new sieve (%u/%u@%u%%) ready in %uus\n", sieve.GetCandidateCount(), nSieveSize, sieve.GetProgressPercentage(), (unsigned int) (GetTimeMicros() - nStart));
         return false; // sieve generation takes time so return now
     }
 
-    if (fDebug && gArgs.GetBoolArg("-printmining2", false))
+    if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining2", false))
         nStart = GetTimeMicros();
 
     // Number of candidates to be tested during a single call to this function
@@ -942,7 +943,7 @@ bool MineProbablePrimeChain(CBlock& block, mpz_class& mpzFixedMultiplier, bool& 
         if (!sieve.GetNextCandidateMultiplier(nTriedMultiplier, nCandidateType))
         {
             // power tests completed for the sieve
-            if (fDebug && gArgs.GetBoolArg("-printmining2", false))
+            if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining2", false))
                 LogPrintf("MineProbablePrimeChain() : %u tests (%u primes) in %uus\n", nTests, nPrimesHit, (unsigned int) (GetTimeMicros() - nStart));
             fNewBlock = true; // notify caller to change nonce
             return false;
@@ -952,7 +953,7 @@ bool MineProbablePrimeChain(CBlock& block, mpz_class& mpzFixedMultiplier, bool& 
         bool fChainFound = ProbablePrimeChainTestFast(mpzChainOrigin, testParams);
         unsigned int nChainPrimeLength = TargetGetLength(nChainLength);
 
-        if (fDebug && gArgs.GetBoolArg("-debugsieve", false))
+        if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-debugsieve", false))
             SieveDebugChecks(nBits, nTriedMultiplier, nCandidateType, mpzHash, mpzFixedMultiplier, mpzChainOrigin);
 
         // Collect mining statistics
@@ -976,7 +977,7 @@ bool MineProbablePrimeChain(CBlock& block, mpz_class& mpzFixedMultiplier, bool& 
         }
     }
     
-    if (fDebug && gArgs.GetBoolArg("-printmining2", false))
+    if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining2", false))
         LogPrintf("MineProbablePrimeChain() : %u tests (%u primes) in %uus\n", nTests, nPrimesHit, (unsigned int) (GetTimeMicros() - nStart));
     
     return false; // stop as new block arrived

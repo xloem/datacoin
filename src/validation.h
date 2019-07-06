@@ -18,6 +18,7 @@
 #include <script/script_error.h>
 #include <sync.h>
 #include <versionbits.h>
+#include <consensus/consensus.h>
 
 #include <algorithm>
 #include <exception>

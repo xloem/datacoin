@@ -154,7 +154,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "sendalert", 5, "id"}, // ConvertTo<boost::int64_t>(params[5]);
     { "sendalert", 6, "cancelupto"}, // ConvertTo<boost::int64_t>(params[6]);
     { "enforcecheckpoint", 0, "enforce"}, // ConvertTo<bool>(params[0]);
-
+    { "listprimerecords", 0, "primechain_length"},
+    { "listtopprimes", 0, "primechain_length"},
 };
 
 class CRPCConvertTable

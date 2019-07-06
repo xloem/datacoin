@@ -163,7 +163,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state, bool fChe
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-empty");
     if (tx.vout.empty() && 0 == tx.data.size())
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vout-empty and 0 == data.size()");
-	if (tx.data.size() > MAX_TX_DATA_SIZE)
+    if (tx.data.size() > MAX_TX_DATA_SIZE)
         return state.DoS(100, false, REJECT_INVALID, "data.size() > MAX_TX_DATA_SIZE");
     // Size limits (this doesn't take the witness into account, as that hasn't been checked for malleability)
     if (::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT)

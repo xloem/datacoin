@@ -52,8 +52,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <memory>
-//#include "prime/checkpointsync.h" //DATACOIN CHECKPOINTSYNC
-#include "util.h"
+#include <util.h>
 
 #ifndef WIN32
 #include <signal.h>
@@ -957,8 +956,6 @@ bool AppInitParameterInteraction()
             }
         }
     }
-	
-	fDebug = gArgs.GetBoolArg("-debug", false);
 
     // Now remove the logging categories which were explicitly excluded
     for (const std::string& cat : gArgs.GetArgs("-debugexclude")) {

@@ -27,6 +27,8 @@
 #include <validationinterface.h>
 #include <warnings.h>
 #include <prime/prime.h>
+#include <wallet/wallet.h>
+#include <init.h>
 
 #include <stdint.h>
 
@@ -68,6 +70,11 @@ double GetDifficulty(const CChain& chain, const CBlockIndex* blockindex)
     double dDiff = GetPrimeDifficulty(blockindex->nBits);
 
     return dDiff;
+}
+
+double GetDifficulty(const CBlockIndex* blockindex)
+{
+    return GetDifficulty(chainActive, blockindex);
 }
 
 UniValue blockheaderToJSON(const CBlockIndex* blockindex)

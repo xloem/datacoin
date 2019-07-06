@@ -2,9 +2,10 @@
 // Distributed under conditional MIT/X11 software license,
 // see the accompanying file COPYING
 
-#include "prime.h"
-#include "miner.h"
-#include "validation.h"
+#include <prime.h>
+#include <miner.h>
+#include <validation.h>
+#include <util.h>
 #include <climits>
 
 /**********************/
