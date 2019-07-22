@@ -796,6 +796,47 @@ UniValue dumpwallet(const JSONRPCRequest& request)
 }
 
 
+UniValue makekeypair(const JSONRPCRequest& request)
+{
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    if (!EnsureWalletIsAvailable(pwallet, request.fHelp)) {
+        return NullUniValue;
+    }
+
+    if (request.fHelp || request.params.size() > 0)
+        throw std::runtime_error(
+            "makekeypair\n"
+            "\nMake a public/private key pair.\n"
+            "\nExamples:\n"
+            "\nMake a public/private key pair.\n"
+            + HelpExampleCli("makekeypair", "") +
+            "\nAs a JSON-RPC call\n"
+            + HelpExampleRpc("makekeypair", "")
+            );
+
+    CKey key;
+    key.MakeNewKey(true);
+    CPubKey pubkey = key.GetPubKey();
+    CKeyID address = pubkey.GetID();
+    CPrivKey privkey = key.GetPrivKey();
+
+    CKey ukey;
+    ukey.MakeNewKey(false);
+    CPubKey upubkey = ukey.GetPubKey();
+    CPrivKey uprivkey = ukey.GetPrivKey();
+    CKeyID uaddress = upubkey.GetID();
+
+    UniValue result(UniValue::VOBJ);
+    result.push_back(Pair("private_key", HexStr(key)));
+    // result.push_back(Pair("U public_key", ukey.ToString()));
+    // result.push_back(Pair("U wallet_address", uaddress));
+    // result.push_back(Pair("U wallet_private_key", uprivkey));
+    // result.push_back(Pair("C public_key", pubkey.ToString()));
+    // result.push_back(Pair("C wallet_address", address));
+    // result.push_back(Pair("C wallet_private_key", privkey));
+    return result;
+}
+
 UniValue ProcessImport(CWallet * const pwallet, const UniValue& data, const int64_t timestamp)
 {
     try {

@@ -1,4 +1,4 @@
- /*********************************************************************
+/*********************************************************************
  * Copyright (c) 2016 Pieter Wuille                                   *
  * Distributed under the MIT software license, see the accompanying   *
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
@@ -12,7 +12,7 @@
  * integers representing 8 AES states.
  */
 
-#include "ctaes.h"
+#include <crypto/ctaes/ctaes.h>
 
 /* Slice variable slice_i contains the i'th bit of the 16 state variables in this order:
  *  0  1  2  3
