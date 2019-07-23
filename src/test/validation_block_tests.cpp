@@ -71,7 +71,10 @@ std::shared_ptr<CBlock> FinalizeBlock(std::shared_ptr<CBlock> pblock)
 {
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 
-    while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) {
+    /** Check whether a block hash satisfies the proof-of-work requirement specified by nBits */
+    // bool CheckProofOfWork(uint256 hashBlockHeader, unsigned int nBits, const Consensus::Params&, const CBigNum& bnPrimeChainMultiplier, unsigned int& nChainType, unsigned int& nChainLength, bool fSilent = false);
+
+    while (!CheckProofOfWork(pblock->GetHeaderHash(), pblock->nBits, Params().GetConsensus(), pblock->bnPrimeChainMultiplier, pblock->nPrimeChainType, pblock->nPrimeChainLength, true)) {
         ++(pblock->nNonce);
     }
 
