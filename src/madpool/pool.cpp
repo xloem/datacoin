@@ -800,10 +800,11 @@ void PoolServer::NotifyNewBlock(CBlockIndex* pindex) {
 	proto::Block* block = sig.mutable_block();
 	block->set_height(pindex->nHeight);
 	block->set_hash(pindex->phashBlock->GetHex());
-    if (pindex->nHeight > 0)
+    if (pindex->nHeight > 0) {
         block->set_prevhash(pindex->pprev->phashBlock->GetHex());
-    else
+    } else {
         block->set_prevhash("0");
+    }
 	block->set_reqdiff(0);
 	block->set_minshare(mMinShare);
 	

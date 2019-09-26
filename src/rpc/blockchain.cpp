@@ -1764,8 +1764,9 @@ UniValue listtopprimes(const JSONRPCRequest& request)
     sort(vSortedByOrigin.begin(), vSortedByOrigin.end());
     reverse(vSortedByOrigin.begin(), vSortedByOrigin.end());
     // Truncate candidate list
-    while (vSortedByOrigin.size() > nRankingSize)
+    while (vSortedByOrigin.size() > nRankingSize) {
         vSortedByOrigin.pop_back();
+    }
 
 	CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
 	bool fwavail = EnsureWalletIsAvailable(pwallet, request.fHelp);
