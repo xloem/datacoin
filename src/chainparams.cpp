@@ -82,11 +82,11 @@ public:
     CMainParams() {
         strNetworkID = "main";
         consensus.nSubsidyHalvingInterval = 210000;
-        consensus.BIP16Height = 173805; // 00000000000000ce80a7e057163a4db1d5ad7b20fb6f598c9597b9665c8fb0d4 - April 1, 2012
-        consensus.BIP34Height = 227931;
-        consensus.BIP34Hash = uint256S("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8");
-        consensus.BIP65Height = 388381; // 000000000000000004c2b624ed5d7756c508d90fd0da2c7c679febfa6c4735f0
-        consensus.BIP66Height = 363725; // 00000000000000000379eaa19dce8c9b722d46ae6a57c2f1a988119488b50931
+        consensus.BIP16Height = 0; // always enforce P2SH BIP16
+        consensus.BIP34Height = 950;
+        consensus.BIP34Hash = uint256S("0x22596accbbde801463d46b802343c915010bcadf1c098119a252a0f17664b466");
+        consensus.BIP65Height = -1;
+        consensus.BIP66Height = -1;
         consensus.powLimit = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetTimespan = 7 * 24 * 60 * 60; // a weeks
         consensus.nPowTargetSpacing = 60;
@@ -109,17 +109,16 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 999999999999ULL; //DATACOIN SEGWIT отключаем SEGWIT =1510704000; // November 15th, 2017.
 
         // The best chain should have at least this much work.
-        //consensus.nMinimumChainWork = uint256S("0x000000000000000000000000000000000000000000723d3581fe1bd55373540a");
-        //DATACOIN CHANGED Минимальная работа активной цепи. 
+        //DATACOIN CHANGED Минимальная работа активной цепи.
         //Загрузка блоков не начнется пока заголовки не достигнут этой работы
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000090000000000");
+        consensus.nMinimumChainWork = uint256S("0x000000000000000000000000000000000000000000000000000031d4a178b250");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x0000000000000000003b9ce759c2a087d52abc4266f8f4ebd6d768b89defa50a"); //477890
+        consensus.defaultAssumeValid = uint256S("0xb7183015dc5e4f2e1be353329e7fd9c0eb32efef412e0a0c5c970a9aacde8d8d"); //3128684
 
         consensus.nTargetInitialLength = 7; // primecoin: initial prime chain target
         consensus.nTargetMinLength = 6;     // primecoin: minimum prime chain target
-		
+
         /**
          * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -136,14 +135,6 @@ public:
         consensus.hashGenesisBlock = genesis.GetHash();
         assert(consensus.hashGenesisBlock == uint256S("0x1d724e874ee9ea571563239bde095911f128db47c7612fb1968c08c9f95cabe8"));
         assert(genesis.hashMerkleRoot == uint256S("0xfe5d7082c24c53362f6b82211913d536677aaffafde0dcec6ff7b348ff6265f8"));
-		
-        // Note that of those with the service bits flag, most only support a subset of possible options
-        vSeeds.emplace_back("seed.ppcoin.net", true); // Pieter Wuille, only supports x1, x5, x9, and xd
-        vSeeds.emplace_back("dnsseed.xpm.altcointech.net", true); // Matt Corallo, only supports x9
-        vSeeds.emplace_back("dnsseed.xpm2.altcointech.net", false); // Luke Dashjr
-        vSeeds.emplace_back("primeseed.muuttuja.org", true); // Christian Decker, supports x1 - xf
-        //vSeeds.emplace_back("seed.bitcoin.jonasschnelli.ch", true); // Jonas Schnelli, only supports x1, x5, x9, and xd
-        //vSeeds.emplace_back("seed.btc.petertodd.org", true); // Peter Todd, only supports x1, x5, x9, and xd
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,30);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,90);
@@ -159,23 +150,23 @@ public:
         fRequireStandard = true;
         fMineBlocksOnDemand = false;
 
-		//DATACOIN CHANGED Добавить чекпоинты
+	//DATACOIN CHANGED Добавить чекпоинты
         checkpointData = {
             {
-                {     0, consensus.hashGenesisBlock },
-                { 72200, uint256S("0x63160677a0dce11897607d62fd6eb3f35c3c42759322c477027c2f2a439df0bc")},
+                {   72204, uint256S("0x661b85bab200d0b1f72c6909c5b2602af8227459ae72b7afbff75d16c8e2b703")},
                 { 2000000, uint256S("0x4e49f85b69f68d6f58b2b18473c4bf17d88e6dd7c79d7d416e22522da17bc91a")},
+                { 3128684, uint256S("0xb7183015dc5e4f2e1be353329e7fd9c0eb32efef412e0a0c5c970a9aacde8d8d")},
             }
         };
 
         chainTxData = ChainTxData{
-            // Data as of block 88bc99151b7809d9e5983c0f762181a0bc55b72702708a6b36fe672409622f05 (height 2388277).
-            1524657498, // * UNIX timestamp of last known number of transactions
-            2710257,          // * total number of transactions between genesis and that timestamp
-            126324797,  // * total data size
+            // Data as of block b7183015dc5e4f2e1be353329e7fd9c0eb32efef412e0a0c5c970a9aacde8d8d (height 3128684).
+            1569522270, // * UNIX timestamp of last known number of transactions
+            3538876,    // * total number of transactions between genesis and that timestamp
                         //   (the tx=... number in the SetBestChain debug.log lines)
+            2140497552, // * total data size
             0.020,      // * estimated number of transactions per second after that timestamp
-			0.083       // * estimated data rate (bytes per sec)
+	    0.083       // * estimated data rate (bytes per sec)
         };
     }
 };
@@ -188,11 +179,11 @@ public:
     CTestNetParams() {
         strNetworkID = "test";
         consensus.nSubsidyHalvingInterval = 210000;
-        consensus.BIP16Height = 514; // 00000000040b4e986385315e14bee30ad876d8b47f748025b26683116d21aa65
-        consensus.BIP34Height = 21111;
-        consensus.BIP34Hash = uint256S("0x0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8");
-        consensus.BIP65Height = 581885; // 00000000007f6655f22f98e72ed80d8b06dc761d5da09df0fa1dc4be4f861eb6
-        consensus.BIP66Height = 330776; // 000000002104c8c45e99a8853285a3b592602a3ccde2b832481da85e9e4ba182
+        consensus.BIP16Height = 0; // always enforce P2SH BIP16
+        consensus.BIP34Height = 750;
+        consensus.BIP34Hash = uint256S("0x8af7eb332ff63e1ff919043fbe87c9cfa2a168903e88c1e34850151a3aed2be0");
+        consensus.BIP65Height = -1;
+        consensus.BIP66Height = -1;
         consensus.powLimit = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetTimespan = 7 * 24 * 60 * 60; // a weeks
         consensus.nPowTargetSpacing = 60;
@@ -215,13 +206,12 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 999999999999ULL; //DATACOIN SEGWIT отключаем SEGWIT = 1493596800; // May 1st 2017
 
         // The best chain should have at least this much work.
-		//consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000002830dab7f76dbb7d63");
-        consensus.nMinimumChainWork = uint256S("0x00");
+        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000001beed3c6966e0");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0xdf7c16e1dee3a79f7de16bcbb586fe5a5fbb1be4a9630b9e4debc3ed1dd585eb"); //1135275
+        consensus.defaultAssumeValid = uint256S("0xe0fd3ea6ef46adabd8f4a58d8b957e9909cd1006eaf23712761f8e72d595c676"); //442608
 
-		consensus.nTargetInitialLength = 4; // primecoin: initial prime chain target
+	consensus.nTargetInitialLength = 4; // primecoin: initial prime chain target
         consensus.nTargetMinLength = 2;     // primecoin: minimum prime chain target
 
         pchMessageStart[0] = 0xdb;
@@ -236,13 +226,8 @@ public:
         assert(consensus.hashGenesisBlock == uint256S("0x26ee5563233ed8cbdd8af5f16bc55b73d9d8cc727392d507292ca959fd08c03f"));
         assert(genesis.hashMerkleRoot == uint256S("0xfe5d7082c24c53362f6b82211913d536677aaffafde0dcec6ff7b348ff6265f8"));
 
-
         vFixedSeeds.clear();
         vSeeds.clear();
-        // nodes with support for servicebits filtering should be at the top
-        vSeeds.emplace_back("tnseed.ppcoin.net", true);
-        vSeeds.emplace_back("primeseed.muuttuja.org", true);
-        //vSeeds.emplace_back("testnet-seed.bluematt.me", false);
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,70);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,132);
@@ -261,17 +246,17 @@ public:
 
         checkpointData = {
             {
-                {0, consensus.hashGenesisBlock},
+                {442608, uint256S("e0fd3ea6ef46adabd8f4a58d8b957e9909cd1006eaf23712761f8e72d595c676")},
             }
         };
 
         chainTxData = ChainTxData{
-            // Data as of block df7c16e1dee3a79f7de16bcbb586fe5a5fbb1be4a9630b9e4debc3ed1dd585eb (height 262670)
-            1524669645,
-            264360,
-			80726444,
+            // Data as of block e0fd3ea6ef46adabd8f4a58d8b957e9909cd1006eaf23712761f8e72d595c676 (height 442608)
+            1569518411,
+            444925,
+            246583384,
             0.020,
-			0.0001
+            0.0001
         };
 
     }
@@ -316,7 +301,7 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x00");
 
-		consensus.nTargetInitialLength = 1; // primecoin: initial prime chain target
+	consensus.nTargetInitialLength = 1; // primecoin: initial prime chain target
         consensus.nTargetMinLength = 1;     // primecoin: minimum prime chain target
 
         pchMessageStart[0] = 0xfa;
