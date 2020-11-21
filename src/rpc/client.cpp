@@ -156,6 +156,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "enforcecheckpoint", 0, "enforce"}, // ConvertTo<bool>(params[0]);
     { "listprimerecords", 0, "primechain_length"},
     { "listtopprimes", 0, "primechain_length"},
+    { "makekeypair", 0, "uncompressed" },
 };
 
 class CRPCConvertTable

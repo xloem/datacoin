@@ -52,7 +52,7 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
-		READWRITE(bnPrimeChainMultiplier);
+        READWRITE(bnPrimeChainMultiplier);
     }
 
     void SetNull()
@@ -63,7 +63,7 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
-		bnPrimeChainMultiplier = 0;
+        bnPrimeChainMultiplier = 0;
     }
 
     bool IsNull() const
