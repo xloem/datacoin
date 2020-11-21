@@ -1,4 +1,5 @@
 // Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2020 The Datacoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -31,6 +32,7 @@ public:
 
     void setModel(WalletModel *model);
     bool validate();
+    bool validateInscription();
     SendCoinsRecipient getValue();
 
     /** Return whether the entry is still empty and unedited */
@@ -49,6 +51,7 @@ public:
     void setFocus();
 
 public Q_SLOTS:
+    void setRemoveEnabled(bool enabled);
     void clear();
     void checkSubtractFeeFromAmount();
 
@@ -56,18 +59,17 @@ Q_SIGNALS:
     void removeEntry(SendCoinsEntry *entry);
     void useAvailableBalance(SendCoinsEntry* entry);
     void payAmountChanged();
-    void inscriptionChanged();
     void subtractFeeFromAmountChanged();
 
 private Q_SLOTS:
     void deleteClicked();
     void useAvailableBalanceClicked();
     void on_payTo_textChanged(const QString &address);
-    void on_inscription_textChanged(const QString &inscription);
     void on_addressBookButton_clicked();
     void on_pasteButton_clicked();
     void updateDisplayUnit();
-
+    void on_selectFileButton_clicked();
+    bool inscriptionChanged();
 private:
     SendCoinsRecipient recipient;
     Ui::SendCoinsEntry *ui;
@@ -75,7 +77,7 @@ private:
     const PlatformStyle *platformStyle;
 
     bool updateLabel(const QString &address);
-    bool updateInscription(const QString &inscription);
+    std::string hashFile(std::string fileName);
 };
 
 #endif // BITCOIN_QT_SENDCOINSENTRY_H

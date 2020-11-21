@@ -120,11 +120,16 @@ static const char* FEE_ESTIMATES_FILENAME="fee_estimates.dat";
 //
 
 std::atomic<bool> fRequestShutdown(false);
+std::atomic<bool> fRequestRestart(false);
 std::atomic<bool> fDumpMempoolLater(false);
 
 void StartShutdown()
 {
     fRequestShutdown = true;
+}
+void StartRestart()
+{
+    fRequestShutdown = fRequestRestart = true;
 }
 bool ShutdownRequested()
 {
@@ -162,11 +167,11 @@ static std::unique_ptr<ECCVerifyHandle> globalVerifyHandle;
 static boost::thread_group threadGroup;
 static CScheduler scheduler;
 
-void Interrupt()
+void Interrupt(boost::thread_group& threadGroup)
 {
     // TODO: DATACOIN miner uncomment?
     // Primecoin: allow miner threads to exit gracefully 
-    if(gArgs.GetBoolArg("-gen", false)) GenerateBitcoins(false, NULL);
+    if(gArgs.GetBoolArg("-gen", false)) GenerateDatacoins(false, 0, Params());
 
     InterruptHTTPServer();
     InterruptHTTPRPC();
@@ -175,9 +180,11 @@ void Interrupt()
     InterruptTorControl();
     if (g_connman)
         g_connman->Interrupt();
+    threadGroup.interrupt_all();
 }
 
-void Shutdown()
+/** Preparing steps before shutting down or restarting the wallet */
+void PrepareShutdown()
 {
     LogPrintf("%s: In progress...\n", __func__);
     static CCriticalSection cs_Shutdown;
@@ -283,6 +290,25 @@ void Shutdown()
     UnregisterAllValidationInterfaces();
     GetMainSignals().UnregisterBackgroundSignalScheduler();
     GetMainSignals().UnregisterWithMempoolSignals(mempool);
+}
+
+/**
+* Shutdown is split into 2 parts:
+* Part 1: shut down everything but the main wallet instance (done in PrepareShutdown() )
+* Part 2: delete wallet instance
+*
+* In case of a restart PrepareShutdown() was already called before, but this method here gets
+* called implicitly when the parent object is deleted. In this case we have to skip the
+* PrepareShutdown() part because it was already executed and just delete the wallet instance.
+*/
+void Shutdown()
+{
+    // Shutdown part 1: prepare shutdown
+    if(!fRequestRestart) {
+        PrepareShutdown();
+    }
+    // Shutdown part 2: Stop TOR thread and close wallets
+    StopTorControl();
 #ifdef ENABLE_WALLET
     CloseWallets();
 #endif
@@ -739,7 +765,7 @@ bool InitSanityCheck(void)
     return true;
 }
 
-bool AppInitServers()
+bool AppInitServers(boost::thread_group& threadGroup)
 {
     RPCServer::OnStarted(&OnRPCStarted);
     RPCServer::OnStopped(&OnRPCStopped);
@@ -1070,6 +1096,11 @@ bool AppInitParameterInteraction()
         fPruneMode = true;
     }
 
+    RegisterAllCoreRPCCommands(tableRPC);
+#ifdef ENABLE_WALLET
+    RegisterWalletRPC(tableRPC);
+#endif
+
     nConnectTimeout = gArgs.GetArg("-timeout", DEFAULT_CONNECT_TIMEOUT);
     if (nConnectTimeout <= 0)
         nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
@@ -1217,7 +1248,7 @@ bool AppInitLockDataDirectory()
     return true;
 }
 
-bool AppInitMain()
+bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
 {
     const CChainParams& chainparams = Params();
     // ********************************************************* Step 4a: application initialization
@@ -1284,7 +1315,7 @@ bool AppInitMain()
     if (gArgs.GetBoolArg("-server", false))
     {
         uiInterface.InitMessage.connect(SetRPCWarmupStatus);
-        if (!AppInitServers())
+        if (!AppInitServers(threadGroup))
             return InitError(_("Unable to start HTTP server. See debug log for details."));
     }
 
@@ -1761,14 +1792,20 @@ bool AppInitMain()
         return false;
     }
 
-    // ********************************************************* Step 12: finished
+
+
+
+
 
     SetRPCWarmupFinished();
-    uiInterface.InitMessage(_("Done loading"));
 
 #ifdef ENABLE_WALLET
     StartWallets(scheduler);
+
 #endif
 
-    return true;
+    // ********************************************************* Step 13: finished
+    uiInterface.InitMessage(_("Done Loading"));
+
+    return !fRequestShutdown;
 }

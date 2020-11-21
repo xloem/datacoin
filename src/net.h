@@ -897,6 +897,11 @@ public:
     void MaybeSetAddrName(const std::string& addrNameIn);
 };
 
+class CExplicitNetCleanup
+{
+public:
+    static void callCleanup();
+};
 
 
 

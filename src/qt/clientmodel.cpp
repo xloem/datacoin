@@ -45,6 +45,8 @@ ClientModel::ClientModel(OptionsModel *_optionsModel, QObject *parent) :
     connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
     pollTimer->start(MODEL_UPDATE_DELAY);
 
+    miningStarted = false;
+
     subscribeToCoreSignals();
 }
 
@@ -73,6 +75,11 @@ int ClientModel::getNumBlocks() const
 {
     LOCK(cs_main);
     return chainActive.Height();
+}
+
+bool ClientModel::getMiningStarted() const
+{
+    return miningStarted;
 }
 
 int ClientModel::getHeaderTipHeight() const
