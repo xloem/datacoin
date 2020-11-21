@@ -133,7 +133,7 @@ void BumpFee(TransactionView& view, const uint256& txid, bool expectDisabled, st
         ConfirmMessage(&text);
     }
     action->trigger();
-    //DATACOIN OLDCLIENT
+    // NOTE: DATACOIN oldclient
     //QVERIFY(text.indexOf(QString::fromStdString(expectError)) != -1);
 }
 
