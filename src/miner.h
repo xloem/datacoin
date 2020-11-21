@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2020 The Datacoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,17 +16,10 @@
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
-/** Run the miner threads */
-void GenerateBitcoins(bool fGenerate, CWallet* pwallet);
-
-extern double dPrimesPerSec;
-extern double dChainsPerDay;
-extern double dBlocksPerDay;
-extern int64_t nHPSTimerStart;
-
 class CBlockIndex;
 class CChainParams;
 class CScript;
+class CWallet;
 
 namespace Consensus { struct Params; };
 
@@ -220,7 +214,15 @@ private:
 void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce, bool fNoReset = false);
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 
-bool CheckWork(CBlock* pblock, CWallet& wallet, std::shared_ptr<CReserveScript> reserve_script, bool fSilent=false);
+bool CheckWork(CBlock* pblock, CWallet& wallet, std::shared_ptr<CReserveScript> reserve_script, int nThread, bool fSilent=false);
 bool MiniMiner(CBlock *pblock, CBlockIndex* pindexPrev, bool allowIncrementExtraNonce = false); // NOTE: DATACOIN added
 
+extern double dHashesPerSec;
+extern bool isMining;
+extern int64_t nHPSTimerStart;
+extern double dPrimesPerSec;
+extern double dChainsPerDay;
+extern double dBlocksPerDay;
+
+int GenerateDatacoins(bool fGenerate, int nThreads, const CChainParams& chainparams);
 #endif // BITCOIN_MINER_H

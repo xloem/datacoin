@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2020 The Datacoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -19,6 +20,8 @@
 #include <string.h>
 #include <string>
 #include <vector>
+
+class CPubKey;
 
 // Maximum number of bytes pushable to the stack
 static const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;
@@ -647,6 +650,7 @@ public:
      */
     unsigned int GetSigOpCount(const CScript& scriptSig) const;
 
+    bool IsPayToPublicKeyHash() const;
     bool IsPayToScriptHash() const;
     bool IsPayToWitnessScriptHash() const;
     bool IsWitnessProgram(int& version, std::vector<unsigned char>& program) const;
@@ -674,6 +678,8 @@ public:
         CScriptBase::clear();
         shrink_to_fit();
     }
+
+    void SetMultisig(int nRequired, const std::vector<CPubKey>& keys);
 };
 
 struct CScriptWitness

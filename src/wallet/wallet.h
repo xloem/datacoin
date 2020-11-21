@@ -986,6 +986,7 @@ public:
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, CValidationState& state);
     std::string SendData(CWalletTx& wtxNew, bool fAskFee, const std::string& txData);
 
+    bool GetTxMessage(CTransactionRef txref, std::string &msg);
 
     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& entries);
     bool AddAccountingEntry(const CAccountingEntry&);

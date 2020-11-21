@@ -6,6 +6,7 @@
 #include <validation.h>
 
 #include <arith_uint256.h>
+#include <amount.h>
 #include <chain.h>
 #include <chainparams.h>
 #include <checkpoints.h>
@@ -14,6 +15,7 @@
 #include <consensus/merkle.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
+#include <core_io.h>
 #include <cuckoocache.h>
 #include <hash.h>
 #include <init.h>
@@ -3391,8 +3393,9 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
             pindex = miSelf->second;
 
             CBlockIndex*& pindexOld = pindex;
-            if ( isFullBlock && pindexOld->nPrimeChainLength==0 && pindexOld->nPrimeChainType==0 )
-            {	auto& fBlock = static_cast<const CBlock&>(block);
+            if ( isFullBlock && pindexOld->nPrimeChainLength == 0 && pindexOld->nPrimeChainType == 0 )
+            {
+                auto& fBlock = static_cast<const CBlock&>(block);
                 if (!CheckBlockHeader(block, state, chainparams.GetConsensus(), true))
                     return error("%s: Consensus::CheckBlockHeader: %s, %s", __func__, hash.ToString(), FormatStateMessage(state));
                 pindexOld->nPrimeChainType = fBlock.nPrimeChainType;  // NOTE: DATACOIN added/oldclient Installing fields
@@ -3583,20 +3586,6 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 
     return true;
 }
-
-// NOTE: DATACOIN wasted Unused primecoin function
-/*
-// Get block work value for main chain protocol
-C_BigNum CBlockIndex::GetBlockWork() const
-{
-    uint64_t nFractionalDifficulty = TargetGetFractionalDifficulty(nBits);
-    unsigned int nWorkExp = 8;
-    nWorkExp += nWorkTransitionRatioLog * (TargetGetLength(nBits) - Params().GetConsensus().nTargetMinLength);
-    C_BigNum bnWork = C_BigNum(1) << nWorkExp;
-    bnWork *= ((uint64_t) nWorkTransitionRatio) * nFractionalDifficulty;
-    bnWork /= (((uint64_t) nWorkTransitionRatio - 1) * nFractionalDifficultyMin + nFractionalDifficulty);
-    return bnWork;
-}*/
 
 bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool *fNewBlock)
 {

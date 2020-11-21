@@ -1796,6 +1796,455 @@ UniValue listtopprimes(const JSONRPCRequest& request)
 
 
 
+static std::string blockgraph(const CBlockIndex* pblockindex)
+{
+
+    bool withTypes = false;
+
+    std::map<std::string,std::string> blockkeys = {
+        std::make_pair("difficulty", "decimal"),
+        std::make_pair("height", "integer"),
+        std::make_pair("mediantime", "integer"),
+        std::make_pair("primechain", "string"),
+        std::make_pair("primechainmultiplier", "integer"),
+        std::make_pair("primeorigin", "integer"),
+        std::make_pair("size", "integer"),
+        std::make_pair("time", "integer"),
+        std::make_pair("transition", "decimal"),
+    };
+
+    // std::string chainid = "<http://purl.org/net/bel-epa/ccy#C324fff4a-c492-4e8b-94f4-2f599efd7ba1> ";
+    std::string rdfs = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    std::string ccy = "<http://purl.org/net/bel-epa/ccy#";
+    std::string ccyC = ccy + "C";
+    std::string doacc = "<http://purl.org/net/bel-epa/doacc#";
+
+    std::stringstream stream;
+
+    CBlock block;
+    auto& consensus_params = Params().GetConsensus();
+    UniValue data;
+    {
+        LOCK(cs_main);
+        ReadBlockFromDisk(block, pblockindex, consensus_params);
+        data = blockToJSON(block, pblockindex, true);
+    }
+
+    std::string blockid = "<http://purl.org/net/bel-epa/ccy#C" + data["hash"].getValStr() + "> ";
+    if (withTypes)
+        stream << blockid << rdfs << "type> " << ccy << "Block> ." << std::endl;
+    if (!data["nextblockhash"].isNull())
+        stream << blockid << ccy << "next> " << ccyC << data["nextblockhash"].getValStr() << "> ." << std::endl;
+    if (pblockindex->nHeight > 0)
+        stream << blockid << ccy << "prev> " << ccyC << data["previousblockhash"].getValStr() << "> ." << std::endl;
+    stream << blockid << ccy << "time> \"" << DateTimeStrFormat("%Y-%m-%dT%H:%M:%SZ", std::stoll(data["time"].getValStr())) << "\"^^<http://www.w3.org/2001/XMLSchema#dateTime> ." << std::endl;
+
+    for (auto it = blockkeys.begin(); it != blockkeys.end(); ++it)
+    {
+        stream << blockid << ccy << it->first << "> \"" << data[it->first].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#" << it->second << "> ." << std::endl;
+    }
+
+    UniValue tx(UniValue::VARR);
+    for (size_t i=0; i<data["tx"].size(); i++) {
+        UniValue txi(UniValue::VARR);
+        UniValue txo(UniValue::VARR);
+        UniValue script(UniValue::VARR);
+
+        tx = data["tx"][i];
+
+        std::string txid = ccyC + tx["txid"].getValStr() + "> ";
+        if (withTypes)
+            stream << txid << rdfs << "type> " << ccy << "Transaction> ." << std::endl;
+        stream << blockid << ccy << "transaction> " << txid << " ." << std::endl;
+        stream << txid << ccy << "time> \"" << DateTimeStrFormat("%Y-%m-%dT%H:%M:%SZ", std::stoll(data["time"].getValStr())) << "\"^^<http://www.w3.org/2001/XMLSchema#dateTime> ." << std::endl;
+        if (tx["locktime"].getValStr() != "0")
+            stream << txid << ccy << "locktime> \"" << tx["txid"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl; 
+
+        if (i == 0) {
+            txi = tx["vin"][0];
+            std::string coinbasetxinput = ccyC + tx["txid"].getValStr() + "-0-0> ";
+            if (withTypes)
+                stream << coinbasetxinput << rdfs << "type> " << ccy << "TransactionInput> ." << std::endl;
+            stream << txid << ccy << "input> " << coinbasetxinput << "." << std::endl;
+            stream << coinbasetxinput << ccy + "coinbase> \"" << txi["coinbase"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+            stream << coinbasetxinput << ccy + "sequence> \"" << txi["sequence"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+
+            txo = tx["vout"][0];
+            script = txo["scriptPubKey"];
+            std::string coinbasetxoutput = ccyC + tx["txid"].getValStr() + "-1-0> ";
+            if (withTypes)
+                stream << coinbasetxoutput << rdfs << "type> " << ccy << "TransactionOutput> ." << std::endl;
+            stream << txid << ccy << "output> " << coinbasetxoutput << "." << std::endl;
+            stream << coinbasetxoutput << ccy + "value> \"" << txo["value"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#decimal> ." << std::endl;
+            stream << coinbasetxoutput << ccy + "n> \"" << txo["n"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+            stream << coinbasetxoutput << ccy + "pkasm> \"" << script["asm"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+            stream << coinbasetxoutput << ccy + "type> \"" << script["type"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+            if (script["type"].getValStr() != "nulldata" && script["type"].getValStr() != "nonstandard") {
+                stream << coinbasetxoutput << ccy + "reqSigs> \"" << script["reqSigs"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                std::string coinbasetxoutputaddresses = ccy + "OA" + tx["txid"].getValStr() + strprintf("-0-0> ");
+                for (size_t m=0; m<script["addresses"].size();m++) {
+                    std::string coinbasetxoutputaddress = ccy + script["addresses"][m].getValStr() + "> ";
+                    if (withTypes)
+                        stream << coinbasetxoutputaddress << rdfs << "type> " << ccy << "Address> " << "." << std::endl;
+                    stream << coinbasetxoutput << ccy << "address> " << coinbasetxoutputaddress << "." << std::endl;
+                }
+            }
+        } else {
+
+            // create TransactionInput
+            for (size_t j=0;j<tx["vin"].size();j++) {
+                txi = tx["vin"][j];
+                std::string txinputid = ccyC + tx["txid"].getValStr() + "-0-" + std::to_string((int)j) + "> ";
+                if (withTypes)
+                    stream << txinputid << rdfs << "type> " << ccy << "TransactionInput> ." << std::endl;
+                stream << txid << ccy << "input> " << txinputid << "." << std::endl;
+                stream << txinputid << ccy + "txid> " << ccyC << txi["txid"].getValStr() << "> ." << std::endl;
+                stream << txinputid << ccy + "nvout> \"" << txi["vout"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+                stream << txinputid << ccy + "ssasm> \"" << txi["scriptSig"]["asm"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                stream << txinputid << ccy + "sequence> \"" << txi["sequence"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+                if (!txi["txinwitness"].isNull()) {
+                    for(size_t w=0; w<txi["txinwitness"].size();w++) {
+                        std::string txinputwitness = ccy + txi["txinwitness"][w].getValStr() + "> ";
+                        stream << txinputid << ccy << "witness> " << txinputwitness << " ." << std::endl;
+                    }
+                }
+                // Mark the txins as spent
+                std::string txspentid = ccyC + tx["txid"].getValStr() + "-1-" + txi["vout"].getValStr() + "> ";
+                stream << txspentid << ccy << "spent> \"true\"^^<http://www.w3.org/2001/XMLSchema#boolean> ." << std::endl;
+            }
+
+            // create TransactionOutput
+            for (size_t k=0;k<tx["vout"].size();k++) {
+                txo = tx["vout"][k];
+                script = txo["scriptPubKey"];
+                std::string txoutputid = ccyC + tx["txid"].getValStr() + "-1-" + std::to_string((int)k) + "> ";
+                if (withTypes)
+                    stream << txoutputid << rdfs << "type> " << ccy << "TransactionOutput> ." << std::endl;
+                stream << txid << ccy << "output> " << txoutputid << "." << std::endl;
+                stream << txoutputid << ccy << "spent> \"false\"^^<http://www.w3.org/2001/XMLSchema#boolean> ." << std::endl;
+                stream << txoutputid << ccy + "value> \"" << txo["value"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#decimal> ." << std::endl;
+                stream << txoutputid << ccy + "n> \"" << txo["n"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+                stream << txoutputid << ccy + "pkasm> \"" << script["asm"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                stream << txoutputid << ccy + "type> \"" << script["type"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+
+                // nonstandard, pubkey, pubkeyhash, scripthash, multisig, nulldata, 
+                // witness_v0_keyhash, witness_v0_scripthash, witness_unknown"
+
+                if (script["type"].getValStr() != "nulldata" && script["type"].getValStr() != "nonstandard") {
+                    stream << txoutputid << ccy + "reqSigs> \"" << script["reqSigs"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                    for (size_t n=0; n<script["addresses"].size();n++) {
+                        std::string txoutputaddress = ccy + script["addresses"][n].getValStr() + "> ";
+                        if (withTypes)
+                            stream << txoutputid << rdfs << "type> " << ccy << "Address> " << "." << std::endl;
+                        stream << txoutputid << ccy << "address> " << txoutputaddress << "." << std::endl;
+                    }
+                }
+            }
+        }
+    }
+    return stream.str();
+}
+
+UniValue renderblock(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() > 1)
+        throw std::runtime_error(
+            "renderblock block\n"
+            "\nReturns an RDF serialization of the block.\n"
+            "\nArguments:\n"
+            "1. block    (numeric) block number to render (default last block).\n"
+            "\nResult:\n"
+            "RDF graph serialized as N-triples\n"
+            "\nExamples:\n"
+            + HelpExampleCli("renderblock", "\"100\"")
+            + HelpExampleRpc("renderblock", "\"100\"")
+        );
+
+
+    LOCK(cs_main);
+
+    CBlock block;
+    CBlockIndex* pblockindex = chainActive.Tip();
+    int blocktorender = pblockindex->nHeight;
+
+    if (!request.params[0].isNull()) {
+        blocktorender = request.params[0].get_int();
+        if (blocktorender < 0 || (blocktorender > 0 && blocktorender > pblockindex->nHeight)) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid block count: should be between 0 and the latest block height");
+        }
+        else {
+            pblockindex = chainActive[blocktorender];
+        }
+    }
+
+    if (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
+        throw JSONRPCError(RPC_MISC_ERROR, "Block not available (pruned data)");
+
+    if (!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+        // Block not found on disk. This could be because we have the block
+        // header in our index but don't have the block (for example if a
+        // non-whitelisted node sends us an unrequested long chain of valid
+        // blocks, we add the headers to our index, but don't accept the
+        // block).
+        throw JSONRPCError(RPC_MISC_ERROR, "Block not found on disk");
+
+    UniValue result(UniValue::VSTR);
+    result.setStr(blockgraph(pblockindex));
+    return result;
+}
+
+UniValue renderblockhash(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 1)
+        throw std::runtime_error(
+            "renderblockhash \"blockhash\""
+            "\nReturns a string that is serialized, RDF-encoded data for block 'hash'.\n"
+            "\nArguments:\n"
+            "1. \"blockhash\"          (string, required) The block hash\n"
+            "\nResult:\n"
+            "RDF graph serialized as N-triples\n"
+            "\nExamples:\n"
+            + HelpExampleCli("renderblockhash", "\"e798f3ae4f57adcf25740fe43100d95ec4fd5d43a1568bc89e2b25df89ff6cb0\"")
+            + HelpExampleRpc("renderblockhash", "\"e798f3ae4f57adcf25740fe43100d95ec4fd5d43a1568bc89e2b25df89ff6cb0\"")
+        );
+
+    LOCK(cs_main);
+
+    std::string strHash = request.params[0].get_str();
+    const uint256 hash(uint256S(strHash));
+
+    if (mapBlockIndex.count(hash) == 0)
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+
+    CBlock block;
+    CBlockIndex* pblockindex = mapBlockIndex[hash];
+
+    if (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
+        throw JSONRPCError(RPC_MISC_ERROR, "Block not available (pruned data)");
+
+    if (!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+        // Block not found on disk. This could be because we have the block
+        // header in our index but don't have the block (for example if a
+        // non-whitelisted node sends us an unrequested long chain of valid
+        // blocks, we add the headers to our index, but don't accept the
+        // block).
+        throw JSONRPCError(RPC_MISC_ERROR, "Block not found on disk");
+
+    UniValue result(UniValue::VSTR);
+    result.setStr(blockgraph(pblockindex));
+    return result;
+}
+
+
+UniValue dumptriples(const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size() < 1 || request.params.size() > 3)
+        throw std::runtime_error(
+            "dumptriples filename startblock endblock\n"
+            "\nCreates an RDF serialization of the blockchain in destination, which can be a directory or a path with filename.\n"
+            "\nArguments:\n"
+            "1. filename      (string) optional filename with path (either absolute or relative)\n"
+            "2. startblock    (numeric) optional first block number to dump (default 0).\n"
+            "3. endblock      (numeric) optional last block number to dump (default 4000000).\n");
+
+    fs::path filepath = request.params[0].get_str();
+    filepath = fs::absolute(filepath);
+
+    int nEndBlock = 4000000;
+    int nStartBlock = 0;
+
+    if (request.params.size() > 1)
+        nStartBlock = request.params[1].get_int();
+
+    if (request.params.size() > 2) {
+        nEndBlock = request.params[2].get_int();
+    }
+
+    try {
+
+        boost::filesystem::path filepath = request.params[0].get_str();
+        filepath = boost::filesystem::absolute(filepath);
+
+        /* Prevent arbitrary files from being overwritten. There have been reports
+         * that users have overwritten wallet files this way:
+         * https://github.com/bitcoin/bitcoin/issues/9934
+         * It may also avoid other security issues.
+         */
+        if (boost::filesystem::exists(filepath)) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, filepath.string() + " already exists. If you are sure this is what you want, move it out of the way first");
+        }
+
+        std::ofstream file;
+        file.open(filepath.string().c_str());
+        if (!file.is_open())
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Cannot open triples dump file");
+
+        CBlockIndex* pblockindex = chainActive[nStartBlock];
+        auto& consensus_params = Params().GetConsensus();
+
+        std::map<std::string,std::string> blockkeys = {
+            std::make_pair("difficulty", "decimal"),
+            std::make_pair("height", "integer"),
+            std::make_pair("mediantime", "integer"),
+            std::make_pair("primechain", "string"),
+            std::make_pair("primechainmultiplier", "integer"),
+            std::make_pair("primeorigin", "integer"),
+            std::make_pair("size", "integer"),
+            std::make_pair("time", "integer"),
+            std::make_pair("transition", "decimal"),
+        };
+        std::string chainid = "<http://purl.org/net/bel-epa/ccy#Cc74ed816-06ae-4b2a-b51a-3ac190810b1e> ";
+        std::string rdfs = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+        std::string ccy = "<http://purl.org/net/bel-epa/ccy#";
+        std::string ccyC = ccy + "C";
+        std::string doacc = "<http://purl.org/net/bel-epa/doacc#";
+
+        // file << chainid << rdfs << "type> " << doacc << "chain> ." << std::endl;
+        // file << chainid << rdfs << "type> " << ccy << "Blockchain> ." << std::endl;
+        // file << chainid << rdfs << "type> " << rdfs << "Seq> ." << std::endl;
+
+        while (pblockindex->nHeight <= nEndBlock)
+        {
+            CBlock block;
+            ReadBlockFromDisk(block, pblockindex, consensus_params);
+            UniValue data;
+            {
+                LOCK(cs_main);
+                data = blockToJSON(block, pblockindex, true);
+            }
+
+            std::string blockid = "<http://purl.org/net/bel-epa/ccy#C" + data["hash"].getValStr() + "> ";
+
+            // file << chainid << rdfs << "_" << data["height"].getValStr()  << "> " << blockid << "." << std::endl;
+            file << blockid << rdfs << "type> " << ccy << "Block> ." << std::endl;
+            file << blockid << ccy << "next> " << ccyC << data["nextblockhash"].getValStr() << "> ." << std::endl;
+            if (pblockindex->nHeight > 0)
+                file << blockid << ccy << "prev> " << ccyC << data["previousblockhash"].getValStr() << "> ." << std::endl;
+
+            for (auto it = blockkeys.begin(); it != blockkeys.end(); ++it)
+            {
+                file << blockid << ccy << it->first << "> \"" << data[it->first].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#" << it->second << "> ." << std::endl;
+            }
+
+            UniValue tx(UniValue::VARR);
+            for (size_t i=0; i<data["tx"].size(); i++) {
+                UniValue txi(UniValue::VARR);
+                UniValue txo(UniValue::VARR);
+                UniValue script(UniValue::VARR);
+
+                tx = data["tx"][i];
+
+                std::string txid = ccy + tx["txid"].getValStr() + "> ";
+                file << txid << rdfs << "type> " << ccy << "Transaction> ." << std::endl;
+                if (tx["locktime"].getValStr() != "0")
+                    file << txid << ccy << "locktime> \"" << tx["txid"].getValStr() << "\" ."; 
+                if (tx["data"].getValStr() != "")
+                    file << txid << ccy << "data> \"" << tx["txid"].getValStr().length() << "\" ."; 
+                // file << blockid << ccy << "hasTransaction> " << txid << "." << std::endl;
+
+                // std::string vinset = ccy + "VI" + tx["txid"].getValStr() + "> ";
+                // file << txid << ccy << "vin> " << vinset << "." << std::endl;
+                // file << vinset << rdfs << "type> " << ccy << "VIn> ." << std::endl;
+
+                // std::string voutset = ccy + "VO" + tx["txid"].getValStr() + "> ";
+                // file << txid << ccy << "vout> " << voutset << "." << std::endl;
+                // file << voutset << rdfs << "type>" << ccy << "VOut> ." << std::endl;
+
+                if (i == 0) {
+                    // file << vinset << rdfs << "_1> " << txid << "." << std::endl;
+                    // file << voutset << rdfs << "_1> " << txid << "." << std::endl;
+                    // create coinbase TransactionInput and TransactionOutput
+                    txi = tx["vin"][0];
+                    std::string coinbasetxinput = ccy + tx["txid"].getValStr() + "-I-0> ";
+                    file << txid << ccy << "txin> " << coinbasetxinput << "." << std::endl;
+                    file << coinbasetxinput << rdfs << "type> " << ccy << "TransactionInput> ." << std::endl;
+                    file << coinbasetxinput << ccy + "coinbase> \"" << txi["coinbase"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                    file << coinbasetxinput << ccy + "sequence> \"" << txi["sequence"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+
+                    txo = tx["vout"][0];
+                    script = txo["scriptPubKey"];
+                    std::string coinbasetxoutput = ccy + tx["txid"].getValStr() + "-O-0> ";
+                    file << txid << ccy << "txout> " << coinbasetxoutput << "." << std::endl;
+                    file << coinbasetxoutput << rdfs << "type> " << ccy << "TransactionOutput> ." << std::endl;
+                    file << coinbasetxoutput << ccy + "value> \"" << txo["value"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#decimal> ." << std::endl;
+                    file << coinbasetxoutput << ccy + "n> \"" << txo["n"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+                    file << coinbasetxoutput << ccy + "asm> \"" << script["asm"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                    file << coinbasetxoutput << ccy + "type> \"" << script["type"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                    if (script["type"].getValStr() != "pubkey") {
+                        file << coinbasetxoutput << ccy + "reqSigs> \"" << script["reqSigs"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                        std::string coinbasetxoutputaddresses = ccy + "OA" + tx["txid"].getValStr() + strprintf("-0-0> ");
+                        file << coinbasetxoutput << ccy + "addresses> " << coinbasetxoutputaddresses << "." << std::endl;
+                        file << coinbasetxoutputaddresses << rdfs << "type> " << rdfs << "Bag> ." << std::endl;
+                        for (size_t m=0; m<script["addresses"].size();m++) {
+                            std::string coinbasetxoutputaddress = ccy + script["addresses"][m].getValStr() + "> ";
+                            file << coinbasetxoutputaddress << rdfs << "type> " << ccy << "Address> " << "." << std::endl;
+                            file << coinbasetxoutputaddresses << rdfs << "_" << m+1 << "> " << coinbasetxoutputaddress << "." << std::endl;
+                        }
+                    }
+                } else {
+
+                    // create TransactionInput
+                    for (size_t j=0;j<tx["vin"].size();j++) {
+                        txi = tx["vin"][j];
+                        std::string txinputid = ccy + tx["txid"].getValStr() + "-I-" + std::to_string((int)j) + "> ";
+                        file << txinputid << rdfs << "type> " << ccy << "TransactionInput> ." << std::endl;
+                        file << txid << ccy << "txin> " << txinputid << "." << std::endl;
+                        // file << vinset << rdfs << "_" << j+1 << "> " << txinputid << "." << std::endl;
+                        file << txinputid << ccy + "txid> " << ccy << txi["txid"].getValStr() << "> ." << std::endl;
+                        file << txinputid << ccy + "nvout> \"" << txi["vout"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+                        file << txinputid << ccy + "scriptSig> \"" << txi["scriptSig"]["asm"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                        file << txinputid << ccy + "sequence> \"" << txi["sequence"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+                        if (!txi["txinwitness"].isNull()) {
+                            std::string txinputwitnesses = ccy + "WI" + tx["txid"].getValStr() + "> ";
+                            file << txinputwitnesses << rdfs + "type> " << ccy << "Witness> ." << std::endl;
+                            file << txinputwitnesses << rdfs + "type> " << ccy << "Bag> ." << std::endl;
+                            file << txinputid << ccy + "haswitnesses> " << ccy << txinputwitnesses << "." << std::endl;
+                            for(size_t w=0; w<txi["txinwitness"].size();w++) {
+                                file << txinputwitnesses << rdfs << "_" << w+1 << "> \"" << txi["txinwitness"][w].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                            }
+                        }
+                    }
+
+                    // create TransactionOutput
+                    for (size_t k=0;k<tx["vout"].size();k++) {
+                        txo = tx["vout"][k];
+                        script = txo["scriptPubKey"];
+                        std::string txoutputid = ccy + tx["txid"].getValStr() + "-O-" + std::to_string((int)k) + "> ";
+                        file << txoutputid << rdfs << "type> " << ccy << "TransactionOutput> ." << std::endl;
+                        file << txid << ccy << "txout> " << txoutputid << "." << std::endl;
+                        // file << voutset << rdfs << "_" << k+1 << "> " << txoutputid << "." << std::endl;
+                        file << txoutputid << ccy + "value> \"" << txo["value"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#decimal> ." << std::endl;
+                        file << txoutputid << ccy + "n> \"" << txo["n"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#integer> ." << std::endl;
+                        file << txoutputid << ccy + "asm> \"" << script["asm"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                        file << txoutputid << ccy + "type> \"" << script["type"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                        if (script["type"].getValStr() != "pubkey") {
+                            file << txoutputid << ccy + "reqSigs> \"" << script["reqSigs"].getValStr() << "\"^^<http://www.w3.org/2001/XMLSchema#string> ." << std::endl;
+                            std::string txoutputidaddresses = ccy + "OA" + tx["txid"].getValStr() + strprintf("-%u-%u> ", i, k);
+                            file << txoutputid << ccy << "addresses> " << txoutputidaddresses << "." << std::endl;
+                            file << txoutputidaddresses << rdfs << "type> " << rdfs << "Bag> ." << std::endl;
+                            for (size_t n=0; n<script["addresses"].size();n++) {
+                                std::string txoutputaddress = ccy + script["addresses"][n].getValStr() + "> ";
+                                file << txoutputaddress << rdfs << "type> " << ccy << "Address>" << "." << std::endl;
+                                file << txoutputidaddresses << rdfs << "_" << n+1 << "> " << txoutputaddress << "." << std::endl;
+                            }
+                        }
+                    }
+                }
+            }
+            pblockindex = chainActive.Next(pblockindex);
+        }
+
+        file.close();
+
+    } catch(const boost::filesystem::filesystem_error &e) {
+        throw JSONRPCError(-1, "Error: Triples dump failed!");
+    }
+
+    UniValue reply(UniValue::VOBJ);
+    reply.pushKV("filename", filepath.string());
+
+    return reply;
+}
 
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
@@ -1832,6 +2281,9 @@ static const CRPCCommand commands[] =
     { "hidden",             "waitforblock",           &waitforblock,           {"blockhash","timeout"} },
     { "hidden",             "waitforblockheight",     &waitforblockheight,     {"height","timeout"} },
     { "hidden",             "syncwithvalidationinterfacequeue", &syncwithvalidationinterfacequeue, {} },
+    { "hidden",             "dumptriples",            &dumptriples,            {"filename", "start", "end"} },
+    { "hidden",             "renderblock",            &renderblock,            {"block"} },
+    { "hidden",             "renderblockhash",        &renderblockhash,        {"blockhash"} },
 };
 
 void RegisterBlockchainRPCCommands(CRPCTable &t)

@@ -34,6 +34,7 @@
 #include <rpc/register.h>
 #include <rpc/safemode.h>
 #include <rpc/blockchain.h>
+#include <rpc/mining.h>
 #include <script/standard.h>
 #include <script/sigcache.h>
 #include <scheduler.h>
@@ -201,6 +202,8 @@ void Shutdown()
 #ifdef ENABLE_WALLET
     FlushWallets();
 #endif
+    GenerateDatacoins(false, 0, Params());
+
     MapPort(false);
 
     // Because these depend on each-other, we make sure that neither can be
@@ -511,6 +514,8 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageGroup(_("Block creation options:"));
     strUsage += HelpMessageOpt("-blockmaxweight=<n>", strprintf(_("Set maximum BIP141 block weight (default: %d)"), DEFAULT_BLOCK_MAX_WEIGHT));
     strUsage += HelpMessageOpt("-blockmintxfee=<amt>", strprintf(_("Set lowest fee rate (in %s/kB) for transactions to be included in block creation. (default: %s)"), CURRENCY_UNIT, FormatMoney(DEFAULT_BLOCK_MIN_TX_FEE)));
+    strUsage += HelpMessageOpt("-gen", strprintf(_("Generate coins (default: %u)"), DEFAULT_GENERATE));
+    strUsage += HelpMessageOpt("-genproclimit=<n>", strprintf(_("Set the number of threads for coin generation if enabled (-1 = all cores, default: %d)"), DEFAULT_GENERATE_THREADS));
     if (showDebug)
         strUsage += HelpMessageOpt("-blockversion=<n>", "Override block version to test forking scenarios");
 
@@ -961,6 +966,8 @@ bool AppInitParameterInteraction()
         }
     }
 
+    fDebug = gArgs.GetBoolArg("-debug", false);
+
     // Now remove the logging categories which were explicitly excluded
     for (const std::string& cat : gArgs.GetArgs("-debugexclude")) {
         uint32_t flag = 0;
@@ -1067,8 +1074,7 @@ bool AppInitParameterInteraction()
     if (nConnectTimeout <= 0)
         nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
 
-    //
-    // primecoin: -mintxfee and -minrelaytxfee options of bitcoin disabled
+    // NOTE: PRIMECOIN -mintxfee and -minrelaytxfee options of bitcoin disabled
     // fixed min fees defined in MIN_TX_FEE and MIN_RELAY_TX_FEE
 	if (incrementalRelayFee > ::minRelayTxFee) {
         // Allow only setting incrementalRelayFee to control both
@@ -1289,6 +1295,11 @@ bool AppInitMain()
     if (!VerifyWallets())
         return false;
 #endif
+
+    bool fGenerate = gArgs.GetBoolArg("-regtest", false) ? false : DEFAULT_GENERATE;
+    // Generate coins in the background
+    GenerateDatacoins(fGenerate, gArgs.GetArg("-genproclimit", DEFAULT_GENERATE_THREADS), chainparams);
+
     // ********************************************************* Step 6: network initialization
     // Note that we absolutely cannot open any actual connections
     // until the very end ("start node") as the UTXO/block state

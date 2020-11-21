@@ -90,6 +90,7 @@ ArgsManager gArgs;
 bool fPrintToConsole = false;
 bool fPrintToDebugLog = true;
 bool fTestNet = false;
+bool fDebug = true;
 
 bool fLogTimestamps = DEFAULT_LOGTIMESTAMPS;
 bool fLogTimeMicros = DEFAULT_LOGTIMEMICROS;
@@ -254,6 +255,7 @@ const CLogCategoryDesc LogCategories[] =
     {BCLog::QT, "qt"},
     {BCLog::LEVELDB, "leveldb"},
     {BCLog::DANDELION, "dandelion"},
+    {BCLog::DEVEL, "devel"},
     {BCLog::ALL, "1"},
     {BCLog::ALL, "all"},
 };

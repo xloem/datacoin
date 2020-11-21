@@ -2691,11 +2691,6 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
         if (recipient.fSubtractFeeFromAmount)
             nSubtractFeeFromAmount++;
     }
-    //if (vecSend.empty())
-    //{
-    //    strFailReason = _("Transaction must have at least one recipient");
-    //    return false;
-    //}
 
     wtxNew.fTimeReceivedIsTxTime = true;
     wtxNew.BindWallet(this);
@@ -3196,6 +3191,30 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
     uiInterface.LoadWallet(this);
 
     return DB_LOAD_OK;
+}
+
+bool GetTxMessage(CTransactionRef txref, std::string &msg)
+{
+    for (const CTxOut& txout : txref->vout) {
+
+        if ( 0 != txout.nValue )
+           continue;
+
+        txnouttype which_type;
+        std::vector<std::vector<unsigned char>> solutions_data;
+
+        if (!Solver(txout.scriptPubKey, which_type, solutions_data))
+            return false;
+
+        if (which_type == TX_NULL_DATA)
+        {
+            std::string str(txout.scriptPubKey.begin(), txout.scriptPubKey.end());
+            msg = str;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 DBErrors CWallet::ZapSelectTx(std::vector<uint256>& vHashIn, std::vector<uint256>& vHashOut)

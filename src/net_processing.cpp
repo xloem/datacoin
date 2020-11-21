@@ -2806,32 +2806,20 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
 
         // NOTE: DATACOIN oldclient
-        //В изначальном клиенте не копируется bnPrimeChainMultiplier в 
-        //CBlock::GetBlockHeader() и CBlockIndex::GetBlockHeader()
-        //Поэтому в заголовках приходят пустые bnPrimeChainMultiplier
-        //и нельзя посчитать правильный header.GetHash()
-        //Потому просто Пропускаем эту проверку.
-        //Это не критично, но можно поправить
-        //("In the original client, the bnPrimeChainMultiplier is not copied to")
-        //("CBlock :: GetBlockHeader () and CBlockIndex :: GetBlockHeader ()")
-        //("Therefore, in the headers come empty bnPrimeChainMultiplier")
-        //("and you can not calculate the correct header. GetHash ()")
-        //("Therefore, just skip this check.")
-        //("This is not critical, but you can fix it.")
-        //uint256 hashLastBlock;
-        //for (const CBlockHeader& header : headers) {
-        //    if (!hashLastBlock.IsNull() && header.hashPrevBlock != hashLastBlock) {
-        //        Misbehaving(pfrom->GetId(), 20);
-        //        return error("non-continuous headers sequence");
-        //    }
-        //    hashLastBlock = header.GetHash();
-        //}
+        // In the original client, the bnPrimeChainMultiplier is not copied to CBlock::GetBlockHeader() and CBlockIndex::GetBlockHeader ()
+        // Therefore, in the headers come empty bnPrimeChainMultiplier" and you can not calculate the correct header. GetHash ()
+        // Therefore, just skip this check. It is not critical, but you can fix it.
+        // uint256 hashLastBlock;
+        // for (const CBlockHeader& header : headers) {
+        //     if (!hashLastBlock.IsNull() && header.hashPrevBlock != hashLastBlock) {
+        //         Misbehaving(pfrom->GetId(), 20);
+        //         return error("non-continuous headers sequence");
+        //     }
+        //     hashLastBlock = header.GetHash();
+        // }
 
-        //DATACOIN OLDCLIENT
-        //Простой тест на старого клиента
-        //ЧТобы сюда не попадать нужно доделать CBlock::GetBlockHeader() и CBlockIndex::GetBlockHeader()
-        // ("A simple test for an old customer")
-        // ("To avoid getting here, you need to finish CBlock :: GetBlockHeader () and CBlockIndex :: GetBlockHeader ()")
+        // NOTE: DATACOIN oldclient
+        // A simple test for an old client To avoid getting here, you need to finish CBlock::GetBlockHeader() and CBlockIndex::GetBlockHeader()
         if (headers[0].bnPrimeChainMultiplier == 0) { 
             LogPrint(BCLog::NET, "Received non full headers. bnPrimeChainMultiplier == 0. Possibly an old client.\n"); // Call to getblocks\n");
 			
@@ -2972,7 +2960,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         mapAlreadyAskedFor.erase(pblock->GetHash());
 					
         if (fNewBlock) {
-            pfrom->nLastBlockTime = curTime;
+            pfrom->nLastBlockTime = GetTime();
         } else {
             LOCK(cs_main);
             mapBlockSource.erase(pblock->GetHash());
