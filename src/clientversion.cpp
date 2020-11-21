@@ -17,7 +17,7 @@ const std::string CLIENT_NAME("Datoshi");
 /**
  * Client version number
  */
-#define CLIENT_VERSION_SUFFIX ""
+#define CLIENT_VERSION_SUFFIX "minki"
 
 
 /**
