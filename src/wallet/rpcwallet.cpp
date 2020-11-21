@@ -10,6 +10,7 @@
 #include <core_io.h>
 #include <httpserver.h>
 #include <validation.h>
+#include <miner.h>
 #include <net.h>
 #include <policy/feerate.h>
 #include <policy/fees.h>
@@ -3670,6 +3671,7 @@ static const CRPCCommand commands[] =
     { "wallet",             "importaddress",            &importaddress,            {"address","label","rescan","p2sh"} },
     { "wallet",             "importprunedfunds",        &importprunedfunds,        {"rawtransaction","txoutproof"} },
     { "wallet",             "importpubkey",             &importpubkey,             {"pubkey","label","rescan"} },
+    { "wallet",             "makekeypair",              &makekeypair,              {"uncompressed"} },
     { "wallet",             "keypoolrefill",            &keypoolrefill,            {"newsize"} },
     { "wallet",             "listaccounts",             &listaccounts,             {"minconf","include_watchonly"} },
     { "wallet",             "listaddressgroupings",     &listaddressgroupings,     {} },
