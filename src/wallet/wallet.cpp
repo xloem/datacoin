@@ -10,6 +10,7 @@
 #include <chain.h>
 #include <wallet/coincontrol.h>
 #include <consensus/consensus.h>
+#include <consensus/params.h>
 #include <consensus/validation.h>
 #include <fs.h>
 #include <wallet/init.h>
@@ -4207,7 +4208,7 @@ int CMerkleTx::GetBlocksToMaturity() const
 {
     if (!IsCoinBase())
         return 0;
-    return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain()); //TODO: COINBASE_MATURITY+200 ?
+    return std::max(0, (Params().GetConsensus().nCoinbaseMaturity+1) - GetDepthInMainChain());
 }
 
 

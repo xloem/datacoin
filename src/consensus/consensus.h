@@ -28,9 +28,6 @@ static const int64_t MAX_BLOCK_SIGOPS_COST = 80000; // TODO: DATACOIN MAX_BLOCK_
 static const int64_t MIN_TX_FEE = (5 * CENT);
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
 static const int64_t MIN_TXOUT_AMOUNT = MIN_TX_FEE;
-/** Coinbase transaction outputs can only be spent after this number of new blocks (network rule) */
-// NOTE: DATACOIN changed
-static const int COINBASE_MATURITY = 3000;
 
 static const int WITNESS_SCALE_FACTOR = 4;
 
