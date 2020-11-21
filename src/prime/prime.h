@@ -116,7 +116,7 @@ unsigned int TargetGetFractional(unsigned int nBits);
 uint64_t TargetGetFractionalDifficulty(unsigned int nBits);
 bool TargetSetFractionalDifficulty(uint64_t nFractionalDifficulty, unsigned int& nBits);
 std::string TargetToString(unsigned int nBits);
-//DATACOIN MINER Возможно стоит разделить prime на prime_miner (в server) и prime (в common)
+// TODO(gjh): DATACOIN miner It may be worth dividing prime into prime_miner (in server) and prime (in common)
 inline unsigned int TargetFromInt(unsigned int nLength) { return (nLength << nFractionalBits); }
 bool TargetGetMint(unsigned int nBits, uint64_t& nMint);
 bool TargetGetNext(unsigned int nBits, int64_t nInterval, int64_t nTargetSpacing, int64_t nActualSpacing, unsigned int& nBitsNext);
@@ -141,7 +141,7 @@ std::string GetPrimeOriginPrimorialForm(CBigNum& bnPrimeChainOrigin);
 
 
 /********************/
-/* DATACOIN MINING */
+/* DATACOIN mining  */
 /********************/
 
 class CSieveOfEratosthenes;

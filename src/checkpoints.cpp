@@ -27,13 +27,5 @@ namespace Checkpoints {
         }
         return nullptr;
     }
-	
-	
-	uint256 GetLatestHardenedCheckpoint()
-    {
-		const CCheckpointData& data = Params().Checkpoints();
-		const MapCheckpoints& checkpoints = data.mapCheckpoints;
-        return (checkpoints.rbegin()->second);
-    }
 
 } // namespace Checkpoints

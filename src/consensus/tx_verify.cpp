@@ -1,4 +1,5 @@
 // Copyright (c) 2017-2017 The Bitcoin Core developers
+// Copyright (c) 2020 The Datacoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -162,7 +163,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state, bool fChe
     if (tx.vin.empty())
         return state.DoS(10, false, REJECT_INVALID, "bad-txns-vin-empty");
     if (tx.vout.empty() && 0 == tx.data.size())
-        return state.DoS(10, false, REJECT_INVALID, "bad-txns-vout-empty and 0 == data.size()");
+        return state.DoS(10, false, REJECT_INVALID, "bad-txns-vout-empty and data.size() == 0");
     if (tx.data.size() > MAX_TX_DATA_SIZE)
         return state.DoS(100, false, REJECT_INVALID, "data.size() > MAX_TX_DATA_SIZE");
     // Size limits (this doesn't take the witness into account, as that hasn't been checked for malleability)
@@ -173,11 +174,12 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state, bool fChe
     CAmount nValueOut = 0;
     for (const auto& txout : tx.vout)
     {
-        //DATACOIN SEGWIT Accept txout nValue==0, scriptPubKey[0]==OP_RETURN, data.size()==0 ???
-        //Кажется такая реализация разрешит постить пустые транзакции бесплатно.
-        // ("It seems that this implementation will allow you to post empty transactions for free.")
-        //GenerateCoinbaseCommitment in validation.cpp
-        //if (txout.nValue < MIN_TXOUT_AMOUNT && !(txout.nValue==0 && txout.scriptPubKey[0]==OP_RETURN && tx.data.size()==0))
+        // TODO(gjh): DATACOIN segwit
+        // NOTE: DATACOIN segwit Accept txout nValue==0, scriptPubKey[0]==OP_RETURN, data.size()==0 ???
+        // It seems that this implementation will allow you to post empty transactions for free.
+        // See also GenerateCoinbaseCommitment in validation.cpp
+        // if (txout.nValue < MIN_TXOUT_AMOUNT && !(txout.nValue==0 && txout.scriptPubKey[0]==OP_RETURN && tx.data.size()==0))
+        // But where did the above come from in the first place? It's not in the 0.8 client.
         if (txout.nValue < MIN_TXOUT_AMOUNT)
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-vout-belowminimum");
         if (txout.nValue > MAX_MONEY)
@@ -248,7 +250,8 @@ bool Consensus::CheckTxInputs(const CTransaction& tx, CValidationState& state, c
 
     // Tally transaction fees
     const CAmount txfee_aux = nValueIn - value_out;
-    // ppcoin: enforce transaction fees for every block
+    // NOTE: DATACOIN 0.8 main.cpp#1387
+    // NOTE: PPCOIN enforce transaction fees for every block
     if (txfee_aux < tx.GetMinFee())
         return state.DoS(100, false, REJECT_INVALID, strprintf("CheckInputs() : %s not paying required fee=%s, paid=%s", tx.GetHash().ToString().substr(0,10).c_str(), FormatMoney(tx.GetMinFee()).c_str(), FormatMoney(txfee_aux).c_str()));
 

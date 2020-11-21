@@ -114,7 +114,7 @@ bool WalletParameterInteraction()
                     _("The wallet will avoid paying less than the minimum relay fee."));
 
     //
-    // primecoin: -mintxfee and -minrelaytxfee options of bitcoin disabled
+    // NOTE: PRIMECOIN -mintxfee and -minrelaytxfee options of bitcoin disabled
     // fixed min fees defined in MIN_TX_FEE and MIN_RELAY_TX_FEE
     if (gArgs.IsArgSet("-fallbackfee"))
     {

@@ -20,7 +20,7 @@ CAmount GetRequiredFee(unsigned int nTxBytes)
 
 
 CAmount GetMinimumFee(unsigned int nTxBytes, const CCoinControl& coin_control, const CTxMemPool& pool, const CBlockPolicyEstimator& estimator, FeeCalculation *feeCalc)
-{   //DATACOIN FEE allow free == false
+{   // NOTE: DATACOIN fee - allow free == false
     /* User control of how to calculate fee uses the following parameter precedence:
        1. coin_control.m_feerate
        2. coin_control.m_confirm_target
@@ -73,10 +73,10 @@ CAmount GetMinimumFee(unsigned int nTxBytes, const CCoinControl& coin_control, c
         fee_needed = maxTxFee;
         if (feeCalc) feeCalc->reason = FeeReason::MAXTXFEE;
     }
-    //DATACOIN FEE. Комиссия не менее ("Commission not less") MIN_TX_FEE - Consensus rule
-    //И не менее ("And no less") tx.GetMinFee(1000, false, GMF_RELAY); для мемпула ("for memory")
-    //Комиссия за данные вообще не обязательна, но старые клиенты (и мы) при создании транзакции все таки делаем ее
-    // ("Data commission is not required at all, but old clients (and we) still make it when creating a transaction")
+    // NOTE: DATACOIN fee. Not less than MIN_TX_FEE - Consensus rule
+    // And no less tx.GetMinFee(1000, false, GMF_RELAY) for memory
+    // Data fee is not required at all but old clients (and we) still
+    // make it when creating a transaction.
     int64_t nPayMinFee = MIN_TX_FEE * (1 + nTxBytes / 1000);
     return std::max(fee_needed, nPayMinFee); 
 }

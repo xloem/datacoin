@@ -1688,15 +1688,6 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             connman->MarkAddressGood(pfrom->addr);
         }
 
-		//DATACOIN CHECKPOINTSYNC
-        // ppcoin: relay sync-checkpoint
-        //{
-        //    LOCK(cs_hashSyncCheckpoint);
-        //    if (!checkpointMessage.IsNull())
-        //        checkpointMessage.RelayTo(pfrom, connman);
-        //}
-
-
         std::string remoteAddr;
         if (fLogIPs)
             remoteAddr = ", peeraddr=" + pfrom->addr.ToString();
@@ -1710,27 +1701,11 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         pfrom->nTimeOffset = nTimeOffset;
         AddTimeData(pfrom->addr, nTimeOffset);
 
-        //DATACOIN REMOVED Для создания корректных алертов нам нужны приватные ключи. А их нет.
-        //Данный алерт не принципиален.
-        // ("To create correct alerts, we need private keys. And they are not.")
-        // ("This alert is not critical.")
-        // If the peer is old enough to have the old alert system, send it the final alert.
-        //if (pfrom->nVersion <= 70012) {
-        //    CDataStream finalAlert(ParseHex("60010000000000000000000000ffffff7f00000000ffffff7ffeffff7f01ffffff7f00000000ffffff7f00ffffff7f002f555247454e543a20416c657274206b657920636f6d70726f6d697365642c2075706772616465207265717569726564004630440220653febd6410f470f6bae11cad19c48413becb1ac2c17f908fd0fd53bdc3abd5202206d0e9c96fe88d4a0f01ed9dedae2b6f9e00da94cad0fecaae66ecf689bf71b50"), SER_NETWORK, PROTOCOL_VERSION);
-        //    connman->PushMessage(pfrom, CNetMsgMaker(nSendVersion).Make("alert", finalAlert));
-        //}
-
         // Feeler connections exist only to verify if address is online.
         if (pfrom->fFeeler) {
             assert(pfrom->fInbound == false);
             pfrom->fDisconnect = true;
         }
-		
-		//DATACOIN CHECKPOINTSYNC
-        // ppcoin: ask for pending sync-checkpoint if any
-        //if (!IsInitialBlockDownload())
-        //    AskForPendingSyncCheckpoint(pfrom);
-
         return true;
     }
 
@@ -1836,20 +1811,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         connman->AddNewAddresses(vAddrOk, pfrom->addr, 2 * 60 * 60);
         if (vAddr.size() < 1000)
             pfrom->fGetAddr = false;
-
-        //DATACOIN DELETE?
-        //Не отсоединяемся и начинаем агрессивную синхронизацию с сида.
-        // ("We do not disconnect and begin aggressive synchronization with Sid.")
-        //вернул как было
-        // ("returned as it was")
-        //static bool agrSync=true;
-        //if (agrSync){
-        //    g_connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(chainActive.Tip()), uint256()));
-        //    agrSync= false;
-        //}else{
         if (pfrom->fOneShot)
             pfrom->fDisconnect = true;
-        //}
     }
 
     else if (strCommand == NetMsgType::SENDHEADERS)
@@ -1902,8 +1865,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         LOCK(cs_main);
 
         uint32_t nFetchFlags = GetFetchFlags(pfrom);
-		
-		CInv* pLastBlockInv = nullptr; //DATACOIN ADDED
+
+		CInv* pLastBlockInv = nullptr; // NOTE: DATACOIN added
         for (CInv &inv : vInv)
         {
             if (interruptMsgProc)
@@ -1927,13 +1890,10 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                     // we now only provide a getheaders response here. When we receive the headers, we will
                     // then ask for the blocks we need.
 
-                    //DATACOIN OLDCLIENT Запрашиваем блок вместо заголовков. Делаем так из за старых клиентов.
-                    // ("We request a block instead of headers. We do it because of old customers.")
-                    //LogPrintf("CALL to AskFor\n");
-                    pLastBlockInv=&inv;
-                    //pfrom->AskFor(inv);
-                    //connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), inv.hash));
-                    //LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->GetId());
+                    // NOTE: DATACOIN oldclient To osupport old clients, request a block instead of headers.
+                    // connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), inv.hash));
+                    // LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->GetId());
+                    pLastBlockInv = &inv;
                 }
             }
             else
@@ -1946,9 +1906,9 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 }
             }
         }
-		if (pLastBlockInv && !IsInitialBlockDownload()) //DATACOIN ADDED
+		if (pLastBlockInv && !IsInitialBlockDownload()) // NOTE: DATACOIN added
 		{
-            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), uint256())); //DATACOIN OPTIMIZE?
+            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), uint256())); // TODO(gjh): DATACOIN optimize?
             LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, uint256().ToString(), pfrom->GetId());
             pfrom->AskFor(*pLastBlockInv);
 		}
@@ -2130,8 +2090,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         LogPrint(BCLog::NET, "getheaders %d to %s from peer=%d\n", (pindex ? pindex->nHeight : -1), hashStop.IsNull() ? "end" : hashStop.ToString(), pfrom->GetId());
         for (; pindex; pindex = chainActive.Next(pindex))
         {
-            //vHeaders.push_back(pindex->GetNonFullBlockHeader());
-            vHeaders.push_back(pindex->GetFullBlockHeader()); //DATACOIN ADDED
+            // vHeaders.push_back(pindex->GetNonFullBlockHeader());
+            vHeaders.push_back(pindex->GetFullBlockHeader()); // NOTE: DATACOIN added/changed
             if (--nLimit <= 0 || pindex->GetBlockHash() == hashStop)
                 break;
         }
@@ -2681,14 +2641,14 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             nodestate->nUnconnectingHeaders++;
             connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), uint256()));
             LogPrint(BCLog::NET, "received header %s: missing prev block %s, sending getheaders (%d) to end (peer=%d, nUnconnectingHeaders=%d)\n",
-                    nCount > 1 ? headers[1].hashPrevBlock.ToString() : "HASH_ABSENT", //DATACOIN ADDED
+                    nCount > 1 ? headers[1].hashPrevBlock.ToString() : "HASH_ABSENT", // NOTE: DATACOIN added
                     headers[0].hashPrevBlock.ToString(),
                     pindexBestHeader->nHeight,
                     pfrom->GetId(), nodestate->nUnconnectingHeaders);
             // Set hashLastUnknownBlock for this peer, so that if we
             // eventually get the headers - even from a different peer -
             // we can use this peer to download.
-            UpdateBlockAvailability(pfrom->GetId(), headers.back().hashPrevBlock); //DATACOIN ADDED
+            UpdateBlockAvailability(pfrom->GetId(), headers.back().hashPrevBlock); // NOTE: DATACOIN added
 
             if (nodestate->nUnconnectingHeaders % MAX_UNCONNECTING_HEADERS == 0) {
                 Misbehaving(pfrom->GetId(), 20);
@@ -2696,7 +2656,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             return true;
         }
 
-        //DATACOIN OLDCLIENT
+        // NOTE: DATACOIN oldclient
         //В изначальном клиенте не копируется bnPrimeChainMultiplier в 
         //CBlock::GetBlockHeader() и CBlockIndex::GetBlockHeader()
         //Поэтому в заголовках приходят пустые bnPrimeChainMultiplier
@@ -2767,7 +2727,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
         nodestate->nUnconnectingHeaders = 0;
 
-		if (nCount==1 && !pindexLast) return true; //DATACOIN OLDCLIENT
+		if (nCount==1 && !pindexLast) return true; // NOTE: DATACOIN oldclient
 
         assert(pindexLast);
         UpdateBlockAvailability(pfrom->GetId(), pindexLast->GetBlockHash());
@@ -2784,7 +2744,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         // If this set of headers is valid and ends in a block with at least as
         // much work as our tip, download as much as possible.
 		LogPrint(BCLog::NET, "fCanDirectFetch=%d pindexLast->IsValid(BLOCK_VALID_TREE)=%d chainActive.Tip()->nChainWork=%s pindexLast->nChainWork=%s\n", 
-                    (int)fCanDirectFetch, (int)pindexLast->IsValid(BLOCK_VALID_TREE), chainActive.Tip()->nChainWork.ToString(), pindexLast->nChainWork.ToString()); //DATACOIN ADDED
+                    (int)fCanDirectFetch, (int)pindexLast->IsValid(BLOCK_VALID_TREE), chainActive.Tip()->nChainWork.ToString(), pindexLast->nChainWork.ToString()); // NOTE: DATACOIN added
         if (fCanDirectFetch && pindexLast->IsValid(BLOCK_VALID_TREE) && chainActive.Tip()->nChainWork <= pindexLast->nChainWork) {
             std::vector<const CBlockIndex*> vToFetch;
             const CBlockIndex *pindexWalk = pindexLast;
@@ -2856,40 +2816,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
         bool fNewBlock = false;
         ProcessNewBlock(chainparams, pblock, forceProcessing, &fNewBlock);
-        //bool ret=ProcessNewBlock(chainparams, pblock, forceProcessing, &fNewBlock);
 		
-        //DATACOIN OLDCLIENT Ugly code Костыль для быстрой начальной синхронизации от старых клиентов
-        // ("Crutch for fast initial synchronization from old clients")
-        int64_t curTime=GetTime();
-        //static int64_t lastNodeRollingTime=curTime;
-        //static int64_t lastSuccessBlockTime=curTime;
-        //static bool needRolling=false;
-        //static uint32_t counter=0;
-        //
-        //if (curTime-lastNodeRollingTime>20*60) needRolling=true;
-        //
-        //if (!needRolling) {
-        //    if (ret) {
-        //        ++counter;
-        //        lastSuccessBlockTime=curTime;
-        //        if (counter>=480) { // или 500
-        //            counter=0;
-        //            connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), uint256()));
-        //        }
-        //    }else if ( (pblock->nTime > pindexBestHeader->nTime) && (curTime-lastSuccessBlockTime) > 30){
-        //    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), uint256()));
-        //    }
-        //}else{
-        //    if (ret) {
-        //        lastSuccessBlockTime=curTime;
-        //    }else if ((pblock->nTime > pindexBestHeader->nTime) && (curTime-lastSuccessBlockTime) > 30){
-        //        LogPrintf("Rolling Initial Download node\n");
-        //        lastNodeRollingTime=curTime;
-        //        needRolling=false;
-        //        counter=0;
-        //        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), uint256()));
-        //    }
-        //}
+        // NOTE: DATACOIN oldclient Ugly code support for fast initial synchronization from old clients
 
         pfrom->setAskFor.erase(pblock->GetHash());
         mapAlreadyAskedFor.erase(pblock->GetHash());
@@ -3030,22 +2958,6 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
     }
 
-	//DATACOIN CHECKPOINTSYNC
-    //else if (strCommand == "checkpoint") // ppcoin synchronized checkpoint
-    //{
-    //    CSyncCheckpoint checkpoint;
-    //    vRecv >> checkpoint;
-    //
-    //    if (checkpoint.ProcessSyncCheckpoint(pfrom))
-    //    {
-    //        // Relay
-    //        pfrom->hashCheckpointKnown = checkpoint.hashCheckpoint;
-	//		connman->ForEachNode([&checkpoint, &connman](CNode* pnode)
-    //            {
-    //                checkpoint.RelayTo(pnode, connman);
-    //            });
-    //    }
-    //}
 
     else if (strCommand == NetMsgType::FILTERLOAD)
     {
@@ -3530,7 +3442,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM
                    got back an empty response.  */
                 if (pindexStart->pprev)
                     pindexStart = pindexStart->pprev;
-                if (pindexStart->pprev)                //DATACOIN OLDCLIENT Double it for Headers.size() >= 2
+                if (pindexStart->pprev) // NOTE: DATACOIN oldclient Double it for Headers.size() >= 2
                     pindexStart = pindexStart->pprev;
                 LogPrint(BCLog::NET, "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
                 connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256()));
@@ -3885,7 +3797,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM
         // Message: getdata (blocks)
         //
         std::vector<CInv> vGetData;
-        if (!pto->fClient && (fFetch || !IsInitialBlockDownload()) && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) { //DATACOIN OLDCLIENT
+        if (!pto->fClient && (fFetch || !IsInitialBlockDownload()) && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) { // NOTE: DATACOIN oldclient
             std::vector<const CBlockIndex*> vToDownload;
             NodeId staller = -1;
             FindNextBlocksToDownload(pto->GetId(), MAX_BLOCKS_IN_TRANSIT_PER_PEER - state.nBlocksInFlight, vToDownload, staller, consensusParams);

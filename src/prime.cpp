@@ -617,7 +617,7 @@ unsigned int EstimateWorkTransition(unsigned int nPrevWorkTransition, unsigned i
 }
 
 /********************/
-/* DATACOIN MINING */
+/* DATACOIN mining  */
 /********************/
 
 // Check Fermat probable primality test (2-PRP): 2 ** (n-1) = 1 (mod n)

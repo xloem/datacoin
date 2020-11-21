@@ -14,7 +14,7 @@
 #include <consensus/merkle.h>
 #include <consensus/validation.h>
 #include <hash.h>
-#include <validation.h>
+#include <madpool/primeserver.h> // NOTE: DATACOIN pool
 #include <net.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
@@ -150,8 +150,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
                        : pblock->GetBlockTime();
 
     pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
-    //DATACOIN MINER. Now draft for bnPrimeChainMultiplier. May be more compex or =0?
-    //Вообще nOnce и bnPrimeChainMultiplier должен подбирать майнер
+
+    // TODO: DATACOIN miner. Now draft for bnPrimeChainMultiplier. May be more compex or =0?
+    // Вообще nOnce и bnPrimeChainMultiplier должен подбирать майнер
     // ("In general, nOnce and bnPrimeChainMultiplier should be selected by a miner")
     pblock->bnPrimeChainMultiplier = chainparams.GenesisBlock().bnPrimeChainMultiplier; 
 
@@ -181,19 +182,18 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(pblock->nBits, chainparams.GetConsensus());
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
 
-	
-    //if (fDebug && gArgs.GetBoolArg("-printmining", false))
-    //    LogPrintf("BlockAssembler::CreateNewBlock()\n");//: total size %u\n", nBlockSize);
+    if (fDebug && gArgs.GetBoolArg("-printmining", false))
+        LogPrintf("BlockAssembler::CreateNewBlock()\n");//: total size %u\n", nBlockSize);
 
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
 
-    //DATACOIN SEGWIT добавляет в ("adds to") coinbaseTx vout c nValue=0
-    //pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
-	
+    // NOTE: DATACOIN segwit adds to coinbaseTx vout from nValue=0
+    // pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
+
     pblocktemplate->vTxFees[0] = -nFees;
 	
 
-    if ((gArgs.IsArgSet("-debug")) || gArgs.GetBoolArg("-printmining", false) || !gArgs.GetBoolArg("-gen", false))
+    if ((gArgs.IsArgSet("-debug")) || gArgs.GetBoolArg("-printmining", false) /*|| !gArgs.GetBoolArg("-gen", false)*/)
         LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
 
     // Fill in header
@@ -486,8 +486,6 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 
 bool CheckWork(CBlock* pblock, CWallet& wallet, std::shared_ptr<CReserveScript> reserve_script, bool fSilent) //CReserveKey& reservekey)
 {
-    //DATACOIN WASTED Primecoin wasting instruction?
-    //C_BigNum bnTarget = CBigNum().SetCompact(pblock->nBits); 
 	
     if (!CheckProofOfWork(pblock->GetHeaderHash(), pblock->nBits, Params().GetConsensus(), pblock->bnPrimeChainMultiplier, pblock->nPrimeChainType, pblock->nPrimeChainLength, fSilent))
         return fSilent ? false : error("DatacoinMiner : failed proof-of-work check");
@@ -847,11 +845,14 @@ void static BitcoinCPUMiner(CWallet *pwallet)
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
     RenameThread("datacoin-miner");
 
-    //Each thread has its own key and counter
-    //CReserveKey reservekey(pwallet); //DATACOIN MINER
-    //DATACOIN OPTIMIZE? Реализовать повторные использования адресов 
-    //или майнинг на единый адрес? Большое количество адресов способно замедлить кошелек
-    // ("Implement address reuse or mining to a single address? A large number of addresses can slow down the wallet")
+    // Each thread has its own key and counter
+    // NOTE: DATACOIN miner
+    // CReserveKey reservekey(pwallet);
+
+    // TODO: DATACOIN optimize?
+    // Implement address reuse or mining to a single address?
+    // A large number of addresses can slow down the wallet")
+
     std::shared_ptr<CReserveScript> coinbase_script;
     pwallet->GetScriptForMining(coinbase_script);
 	
@@ -953,7 +954,7 @@ void static BitcoinCPUMiner(CWallet *pwallet)
             continue;
         }
 
-        //DATACOIN SEGWIT: fMineWitnessTx=false ?
+        // TODO(gjh): DATACOIN segwit fMineWitnessTx=false ?
         std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbase_script->reserveScript, false));
         if (!pblocktemplate.get())
             return;
@@ -981,17 +982,17 @@ void static BitcoinCPUMiner(CWallet *pwallet)
 
             // Check that the hash meets the minimum
             uint256 phash = pblock->GetHeaderHash();
-            if (UintToArith256(phash) < hashBlockHeaderLimit) //DATACOIN OPTIMIZE?
+            if (UintToArith256(phash) < hashBlockHeaderLimit) //TODO(gjh): DATACOIN optimize?
                 continue;
 
             mpz_set_uint256(mpzHash.get_mpz_t(), phash);
             if (nMiningProtocol >= 2) {
-                // Primecoin: Mining protocol v0.2
+                // NOTE: PRIMECOIN Mining protocol v0.2
                 // Try to find hash that is probable prime
                 if (!ProbablePrimalityTestWithTrialDivision(mpzHash, 1000, testParams))
                     continue;
             } else {
-                // Primecoin: Check that the hash is divisible by the fixed primorial
+                // NOTE: PRIMECOIN Check that the hash is divisible by the fixed primorial
                 if (!mpz_divisible_ui_p(mpzHash.get_mpz_t(), nHashFactor))
                     continue;
             }
@@ -1001,7 +1002,8 @@ void static BitcoinCPUMiner(CWallet *pwallet)
         }
         if (pblock->nNonce >= 0xffff0000)
             continue;
-        // Primecoin: primorial fixed multiplier
+
+        // NOTE: PRIMECOIN primorial fixed multiplier
         mpz_class mpzPrimorial;
         mpz_class mpzFixedMultiplier;
         unsigned int nRoundTests = 0;
@@ -1035,7 +1037,7 @@ void static BitcoinCPUMiner(CWallet *pwallet)
                     vFoundChainCounter[i] = 0;
             }
 
-            // Primecoin: Mining protocol v0.2
+            // NOTE: PRIMECOOIN Mining protocol v0.2
             if (nMiningProtocol >= 2)
                 mpzFixedMultiplier = mpzPrimorial;
             else
@@ -1046,12 +1048,12 @@ void static BitcoinCPUMiner(CWallet *pwallet)
                     mpzFixedMultiplier = 1;
             }
 
-            // Primecoin: mine for prime chain
+            // NOTE: PRIMECOIN mine for prime chain
             if (MineProbablePrimeChain(*pblock, mpzFixedMultiplier, fNewBlock, nTests, nPrimesHit, mpzHash, pindexPrev, vChainsFound, sieve, testParams))
             {
                 SetThreadPriority(THREAD_PRIORITY_NORMAL);
                 nTotalBlocksFound++;
-                CheckWork(pblock, *pwallet, coinbase_script); //TODO: pwalletMain?
+                CheckWork(pblock, *pwallet, coinbase_script, nThread); // TODO(gjh): use pwalletMain?
                 SetThreadPriority(THREAD_PRIORITY_LOWEST);
             }
             nRoundTests += nTests;
@@ -1121,8 +1123,8 @@ void static BitcoinCPUMiner(CWallet *pwallet)
                 break;
             if (fNewBlock)
             {
-                // Primecoin: a sieve+primality round completes
-                // Primecoin: estimate time to block
+                // NOTE: PRIMECOIN a sieve+primality round completes
+                // NOTE: PRIMECOIN estimate time to block
                 unsigned int nCalcRoundTests = std::max(1u, nRoundTests);
                 // Make sure the estimated time is very high if only 0 primes were found
                 if (nRoundPrimesHit == 0)
@@ -1187,16 +1189,16 @@ void static BitcoinCPUMiner(CWallet *pwallet)
                     LogPrintf("DatacoinMiner() : Round primorial=%u tests=%u primes=%u time=%uus pprob=%1.6f pprob2=%1.6f pprobextra=%1.6f tochain=%6.3fd expect=%3.12f expectblock=%3.12f\n", nPrimorialMultiplier, nRoundTests, nRoundPrimesHit, (unsigned int) nRoundTime, dPrimeProbabilityBegin, dPrimeProbabilityEnd, dExtraPrimeProbability, ((dTimeExpected/1000000.0))/86400.0, dRoundChainExpected, dRoundBlockExpected);
                 }
 
-                // Primecoin: primorial always needs to be incremented if only 0 primes were found
+                // NOTE: PRIMECOIN primorial always needs to be incremented if only 0 primes were found
                 if (nRoundPrimesHit == 0)
                     nAdjustPrimorial = 1;
 
-                // Primecoin: reset sieve+primality round timer
+                // NOTE: PRIMECOIN reset sieve+primality round timer
                 nPrimeTimerStart = GetTimeMicros();
                 nRoundTests = 0;
                 nRoundPrimesHit = 0;
 
-                // Primecoin: update time and nonce
+                // NOTE: PRIMECOIN update time and nonce
                 pblock->nTime = std::max(pblock->nTime, (unsigned int) GetAdjustedTime());
                 while(true) {
                     pblock->nNonce++;
@@ -1205,17 +1207,17 @@ void static BitcoinCPUMiner(CWallet *pwallet)
 
                     // Check that the hash meets the minimum
                     uint256 phash = pblock->GetHeaderHash();
-                    if (UintToArith256(phash) < hashBlockHeaderLimit) //DATACOIN OPTIMIZE?
+                    if (UintToArith256(phash) < hashBlockHeaderLimit) // TODO(gjh): DATACOIN optimize?
                         continue;
 
                     mpz_set_uint256(mpzHash.get_mpz_t(), phash);
                     if (nMiningProtocol >= 2) {
-                        // Primecoin: Mining protocol v0.2
+                        // NOTE: PRIMECOIN Mining protocol v0.2
                         // Try to find hash that is probable prime
                         if (!ProbablePrimalityTestWithTrialDivision(mpzHash, 1000, testParams))
                             continue;
                     } else {
-                        // Primecoin: Check that the hash is divisible by the fixed primorial
+                        // NOTE: PRIMECOIN Check that the hash is divisible by the fixed primorial
                         if (!mpz_divisible_ui_p(mpzHash.get_mpz_t(), nHashFactor))
                             continue;
                     }
@@ -1226,7 +1228,7 @@ void static BitcoinCPUMiner(CWallet *pwallet)
                 if (pblock->nNonce >= 0xffff0000)
                     break;
 
-                // Primecoin: dynamic adjustment of primorial multiplier
+                // NOTE: PRIMECOIN dynamic adjustment of primorial multiplier
                 if (nFixedPrimorial == 0 && nAdjustPrimorial != 0) {
                     if (nAdjustPrimorial > 0)
                     {
@@ -1260,34 +1262,10 @@ void static BitcoinCPUMiner(CWallet *pwallet)
 
 void GenerateBitcoins(bool fGenerate, CWallet* pwallet)
 {
-//    static boost::thread_group* minerThreads = NULL;
-//    
-//    int nThreads = gArgs.GetArg("-genproclimit", -1);
-//    if (nThreads < 0)
-//        nThreads = boost::thread::hardware_concurrency();
-//    
-//    if (minerThreads != NULL)
-//    {
-//		LogPrintf("DatacoinMiner threads: START TERMINATING\n");
-//        minerThreads->interrupt_all();
-//		//Лучше пусть грохнутся майнерные потоки, чем зависнуть здесь и не завершить грамотно остальное
-        // ("It is better to let the miner flows crash than hang here and not complete the rest correctly")
-//		//minerThreads->join_all();
-//		//LogPrintf("DatacoinMiner threads: COMPLETED TERMINATING\n");
-//		//интересно можно ли тут сразу вызывать деструктор
-//      //("I wonder if you can immediately call the destructor")
-//        delete minerThreads;
-//        minerThreads = NULL;
-//    }
-//    
-//    if (nThreads == 0 || !fGenerate)
-//        return;
-//    
-//    minerThreads = new boost::thread_group();
-//    for (int i = 0; i < nThreads; i++)
-//        minerThreads->create_thread(boost::bind(&BitcoinCPUMiner, pwallet));
-	//DATACOIN POOL
-    LogPrintf("[PrimeServer] GenerateBitcoins: %s\n", fGenerate ? "true" : "false");
+
+    // NOTE: DATACOIN pool
+    if (fDebug && gArgs.GetBoolArg("-printmining", false))
+        LogPrintf("[PrimeServer] GenerateDatacoins: %s\n", fGenerate ? "true" : "false");
 	
     if(gPrimeServer && !fGenerate){
     	
@@ -1300,15 +1278,5 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet)
     	
     	gPrimeServer = PrimeServer::CreateServer(pwallet);
     	gPrimeServer->NotifyNewBlock(chainActive.Tip());
-    	
-//#ifndef WIN32
-//    	struct sigaction sa;
-//		sa.sa_handler = HandleSIGTERM;
-//		sigemptyset(&sa.sa_mask);
-//		sa.sa_flags = 0;
-//		sigaction(SIGTERM, &sa, NULL);
-//		sigaction(SIGINT, &sa, NULL);
-//#endif
-  	
      }
 }

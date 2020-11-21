@@ -94,24 +94,24 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.push_back(Pair("time", (int64_t)blockindex->nTime));
     result.push_back(Pair("mediantime", (int64_t)blockindex->GetMedianTimePast()));
     result.push_back(Pair("nonce", (uint64_t)blockindex->nNonce));
-	result.push_back(Pair("primechainmultiplier", blockindex->bnPrimeChainMultiplier.ToString())); //DATACOIN ADDED
+    result.push_back(Pair("primechainmultiplier", blockindex->bnPrimeChainMultiplier.ToString())); // NOTE: DATACOIN added
     result.push_back(Pair("bits", strprintf("%08x", blockindex->nBits)));
     result.push_back(Pair("difficulty", GetPrimeDifficulty(blockindex->nBits)));
     result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex())); 
     result.push_back(Pair("transition", GetPrimeDifficulty(blockindex->nWorkTransition)));
-	result.push_back(Pair("primechain", GetPrimeChainName(blockindex->nPrimeChainType, blockindex->nPrimeChainLength)));
-//	auto& hHash=blockindex->GetHeaderHash();
-//	if (hHash) {
-//		CBigNum bnPrimeChainOrigin = CBigNum(hHash) * blockindex->bnPrimeChainMultiplier;
-//		result.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));		
-//	} else
-//		result.push_back(Pair("primeorigin", "unknown"));	
+    result.push_back(Pair("primechain", GetPrimeChainName(blockindex->nPrimeChainType, blockindex->nPrimeChainLength)));
+    // auto& hHash=blockindex->GetHeaderHash();
+    // if (hHash) {
+    //     CBigNum bnPrimeChainOrigin = CBigNum(hHash) * blockindex->bnPrimeChainMultiplier;
+    //     result.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));       
+    // } else
+    //     result.push_back(Pair("primeorigin", "unknown"));   
 
     if (blockindex->pprev) {
         result.push_back(Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
-		CBigNum bnPrimeChainOrigin = CBigNum(blockindex->GetHeaderHash()) * blockindex->bnPrimeChainMultiplier;
-		result.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));
-	}
+        CBigNum bnPrimeChainOrigin = CBigNum(blockindex->GetHeaderHash()) * blockindex->bnPrimeChainMultiplier;
+        result.push_back(Pair("primeorigin", bnPrimeChainOrigin.ToString()));
+    }
     CBlockIndex *pnext = chainActive.Next(blockindex);
     if (pnext)
         result.push_back(Pair("nextblockhash", pnext->GetBlockHash().GetHex()));
@@ -133,7 +133,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.push_back(Pair("weight", (int)::GetBlockWeight(block)));
     result.push_back(Pair("height", blockindex->nHeight));
     result.push_back(Pair("version", block.nVersion));
-	result.push_back(Pair("headerhash", block.GetHeaderHash().GetHex()));
+    result.push_back(Pair("headerhash", block.GetHeaderHash().GetHex()));
     result.push_back(Pair("versionHex", strprintf("%08x", block.nVersion)));
     result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
     UniValue txs(UniValue::VARR);
@@ -152,7 +152,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.push_back(Pair("time", block.GetBlockTime()));
     result.push_back(Pair("mediantime", (int64_t)blockindex->GetMedianTimePast()));
     result.push_back(Pair("nonce", (uint64_t)block.nNonce));
-    result.push_back(Pair("primechainmultiplier", block.bnPrimeChainMultiplier.ToString())); //DATACOIN ADDED
+    result.push_back(Pair("primechainmultiplier", block.bnPrimeChainMultiplier.ToString())); // NOTE: DATACOIN added
     result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
     result.push_back(Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(Pair("chainwork", blockindex->nChainWork.GetHex()));
@@ -1633,9 +1633,9 @@ UniValue savemempool(const JSONRPCRequest& request)
 
 // Primecoin: list prime chain records within primecoin network
 UniValue listprimerecords(const JSONRPCRequest& request)
-{	
-	auto& fHelp = request.fHelp;
-	auto& params = request.params;
+{   
+    auto& fHelp = request.fHelp;
+    auto& params = request.params;
 
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw std::runtime_error(
@@ -1663,9 +1663,9 @@ UniValue listprimerecords(const JSONRPCRequest& request)
 
     CBigNum bnPrimeRecord = 0;
 
-	CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
-	bool fwavail = EnsureWalletIsAvailable(pwallet, request.fHelp);
-				
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    bool fwavail = EnsureWalletIsAvailable(pwallet, request.fHelp);
+                
     uint32_t nHeight=0;
     for (CBlockIndex* pindex = chainActive[nHeight]; pindex; nHeight++)
     {
@@ -1675,7 +1675,7 @@ UniValue listprimerecords(const JSONRPCRequest& request)
             continue; // type not matching, next block
 
         CBlock block;
-		if (!ReadBlockFromDisk(block, pindex, Params().GetConsensus())) continue;
+        if (!ReadBlockFromDisk(block, pindex, Params().GetConsensus())) continue;
 
         CBigNum bnPrimeChainOrigin = CBigNum(block.GetHeaderHash()) * block.bnPrimeChainMultiplier; // compute prime chain origin
 
@@ -1685,7 +1685,7 @@ UniValue listprimerecords(const JSONRPCRequest& request)
             ret.push_back(Pair("time", DateTimeStrFormat("%Y-%m-%d %H:%M:%S UTC", pindex->GetBlockTime())));
             ret.push_back(Pair("epoch", (boost::int64_t) pindex->GetBlockTime()));
             ret.push_back(Pair("height", pindex->nHeight));
-			if (fwavail) ret.push_back(Pair("ismine", pwallet->IsMine(*(block.vtx[0]))));
+            if (fwavail) ret.push_back(Pair("ismine", pwallet->IsMine(*(block.vtx[0]))));
             CTxDestination address;
             ret.push_back(Pair("mineraddress", (block.vtx[0]->vout.size() > 1)? "multiple" : ExtractDestination(block.vtx[0]->vout[0].scriptPubKey, address)? EncodeDestination(address) : "invalid"));
             ret.push_back(Pair("primedigit", (int) bnPrimeChainOrigin.ToString().length()));
@@ -1700,9 +1700,9 @@ UniValue listprimerecords(const JSONRPCRequest& request)
 
 // Primecoin: list top prime chain within primecoin network
 UniValue listtopprimes(const JSONRPCRequest& request)
-{	
-	auto& fHelp = request.fHelp;
-	auto& params = request.params;
+{   
+    auto& fHelp = request.fHelp;
+    auto& params = request.params;
 
     if (fHelp || params.size() < 1 || params.size() > 2)
         throw std::runtime_error(
@@ -1731,8 +1731,8 @@ UniValue listtopprimes(const JSONRPCRequest& request)
     unsigned int nSortVectorSize = 64; // vector size for sort operation
     CBigNum bnPrimeQualify = 0; // minimum qualify value for ranking list
     std::vector<std::pair<CBigNum, uint256> > vSortedByOrigin;
-	
-	uint32_t nHeight=0;
+    
+    uint32_t nHeight=0;
     for (CBlockIndex* pindex = chainActive[nHeight]; pindex; nHeight++)
     {
         if (nPrimeChainLength != (int) TargetGetLength(pindex->nPrimeChainLength))
@@ -1741,7 +1741,7 @@ UniValue listtopprimes(const JSONRPCRequest& request)
             continue; // type not matching, next block
 
         CBlock block;
-		if (!ReadBlockFromDisk(block, pindex, Params().GetConsensus())) continue;
+        if (!ReadBlockFromDisk(block, pindex, Params().GetConsensus())) continue;
         CBigNum bnPrimeChainOrigin = CBigNum(block.GetHeaderHash()) * block.bnPrimeChainMultiplier; // compute prime chain origin
 
         if (bnPrimeChainOrigin > bnPrimeQualify)
@@ -1768,9 +1768,9 @@ UniValue listtopprimes(const JSONRPCRequest& request)
         vSortedByOrigin.pop_back();
     }
 
-	CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
-	bool fwavail = EnsureWalletIsAvailable(pwallet, request.fHelp);
-	
+    CWallet * const pwallet = GetWalletForJSONRPCRequest(request);
+    bool fwavail = EnsureWalletIsAvailable(pwallet, request.fHelp);
+    
     // Output top prime chains
     UniValue ret(UniValue::VOBJ);
     for(const auto& item : vSortedByOrigin)
@@ -1822,7 +1822,7 @@ static const CRPCCommand commands[] =
 
     { "blockchain",         "listprimerecords",       &listprimerecords,       {"primechain_length","primechain_type"} },
     { "blockchain",         "listtopprimes",          &listtopprimes,          {"primechain_length","primechain_type"} },
-	
+    
     { "blockchain",         "preciousblock",          &preciousblock,          {"blockhash"} },
 
     /* Not shown in help */

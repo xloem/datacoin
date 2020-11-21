@@ -308,7 +308,7 @@ enum ServiceFlags : uint64_t {
  * should be updated appropriately to filter for the same nodes.
  */
 static ServiceFlags GetDesirableServiceFlags(ServiceFlags services) {
-    //DATACOIN SEGWIT 
+    // TODO(gjh): DATACOIN segwit
     //we auto connect only nodes with all these flags.
     //now there are not witness nodes
     //Turn on NODE_WITNESS only after many nodes (especially seed nodes) 

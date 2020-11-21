@@ -19,7 +19,7 @@ static void TestBlockSubsidyHalvings(const Consensus::Params& consensusParams)
     int maxLength = 24;
     CAmount nInitialSubsidy = 999 * COIN;
 
-    //DATACOIN CHANGED
+    // NOTE: DATACOIN changed
     CAmount nPreviousSubsidy = nInitialSubsidy * 2; // for height == 0
     BOOST_CHECK_EQUAL(nPreviousSubsidy, nInitialSubsidy * 2);
     for (int nLength = consensusParams.nTargetMinLength; nLength < maxLength; nLength++) {
@@ -27,8 +27,8 @@ static void TestBlockSubsidyHalvings(const Consensus::Params& consensusParams)
         CAmount nSubsidy = GetBlockSubsidy(TargetFromInt(nLength), consensusParams);
         //std::cerr << nLength << std::endl;
         BOOST_CHECK(nSubsidy < nPreviousSubsidy);
-        //DATACOIN OPTIMIZE?  inapplicable
-        //BOOST_CHECK_EQUAL(nSubsidy, nPreviousSubsidy / 2);
+        // NOTE: DATACOIN optimize?  inapplicable
+        // BOOST_CHECK_EQUAL(nSubsidy, nPreviousSubsidy / 2);
         nPreviousSubsidy = nSubsidy;
     }
     BOOST_CHECK_EQUAL(GetBlockSubsidy(TargetFromInt(maxLength), consensusParams), 173000000);
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(subsidy_limit_test)
         nSum += nSubsidy * 1000;
         BOOST_CHECK(MoneyRange(nSum));
     }
-    //BOOST_CHECK_EQUAL(nSum, 2099999997690000ULL); //DATACOIN OPTIMIZE? unapplicable
+    //BOOST_CHECK_EQUAL(nSum, 2099999997690000ULL); // TODO(gjh): DATACOIN optmize? inapplicable
 }
 
 bool ReturnFalse() { return false; }

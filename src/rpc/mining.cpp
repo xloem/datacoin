@@ -276,8 +276,8 @@ UniValue getmininginfo(const JSONRPCRequest& request)
     obj.push_back(Pair("difficulty",       getdifficulty(request)));
     //obj.push_back(Pair("networkhashps",    getnetworkhashps(request)));
     obj.push_back(Pair("pooledtx",         (uint64_t)mempool.size()));
-    obj.push_back(Pair("generate",      (bool)gArgs.GetBoolArg("-gen", false))); //DATACOIN ADDED
-    obj.push_back(Pair("genproclimit",  (int)gArgs.GetArg("-genproclimit", -1))); //DATACOIN ADDED
+    obj.push_back(Pair("generate",      (bool)gArgs.GetBoolArg("-gen", false))); // NOTE: DATACOIN added
+    obj.push_back(Pair("genproclimit",  (int)gArgs.GetArg("-genproclimit", -1))); // NOTE: DATACOIN added
     obj.push_back(Pair("sieveextensions",(int)nSieveExtensions));
     obj.push_back(Pair("sievefilterprimes",(int)nSieveFilterPrimes));
     obj.push_back(Pair("sievesize",     (int)nSieveSize));
@@ -1040,7 +1040,9 @@ UniValue estimaterawfee(const JSONRPCRequest& request)
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
-  //  { "mining",             "getnetworkhashps",       &getnetworkhashps,       {"nblocks","height"} },
+    // TODO(gjh): mining, resolve getnetworkhash(primes)ps
+    { "mining",             "getnetworkhashps",       &getnetworkhashps,       {"nblocks","height"} },
+    */
     { "mining",             "getmininginfo",          &getmininginfo,          {} },
     { "mining",             "prioritisetransaction",  &prioritisetransaction,  {"txid","dummy","fee_delta"} },
     { "mining",             "getblocktemplate",       &getblocktemplate,       {"template_request"} },

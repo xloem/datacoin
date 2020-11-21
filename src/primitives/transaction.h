@@ -239,8 +239,8 @@ inline void UnserializeTransaction(TxType& tx, Stream& s) {
 
 template<typename Stream, typename TxType>
 inline void SerializeTransaction(const TxType& tx, Stream& s) {
-	const bool fAllowWitness = false; //DATACOIN SEGWIT Жестко выключили сериализацию с витнес. Включить когда будет большинство новых клиентов.
-                                      // ("Hardly turned off the serialization of Witnes. Include when there will be most new customers.")
+    // TODO(gjh): DATACOIN segwit Disable the serialization of witness data until segwit is enabled.
+	const bool fAllowWitness = false;
     //const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
 
     s << tx.nVersion;
@@ -277,7 +277,8 @@ class CTransaction
 {
 public:
     // Default transaction version.
-    static const int32_t CURRENT_VERSION=1; //DATACOIN OLDCLIENT Сменить на 2 при первой возможности ("Change to 2 as soon as possible")
+    // TODO(gjh): DATACOIN oldclient change CTransaction version to 2 as soon as possible
+    static const int32_t CURRENT_VERSION=1; 
 
     // Changing the default transaction version requires a two step process: first
     // adapting relay policy by bumping MAX_STANDARD_VERSION, and then later date

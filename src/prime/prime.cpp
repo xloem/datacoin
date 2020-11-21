@@ -523,7 +523,7 @@ bool CheckPrimeProofOfWork(uint256 hashBlockHeader, unsigned int nBits, const CB
         return error("CheckPrimeProofOfWork() : invalid chain length target %s", TargetToString(nBits).c_str());
 
     // Check header hash limit
-    if (UintToArith256(hashBlockHeader) < hashBlockHeaderLimit) //DATACOIN OPTIMIZE?
+    if (UintToArith256(hashBlockHeader) < hashBlockHeaderLimit) // TODO: DATACOIN optimize?
         return error("CheckPrimeProofOfWork() : block header hash under limit");
     // Check target for prime proof-of-work
     CBigNum bnPrimeChainOrigin = CBigNum(hashBlockHeader) * bnPrimeChainMultiplier;

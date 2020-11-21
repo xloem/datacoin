@@ -163,7 +163,7 @@ static CScheduler scheduler;
 
 void Interrupt()
 {
-    //DATACOIN MINER uncomment?
+    // TODO: DATACOIN miner uncomment?
     // Primecoin: allow miner threads to exit gracefully 
     if(gArgs.GetBoolArg("-gen", false)) GenerateBitcoins(false, NULL);
 
@@ -1088,14 +1088,6 @@ bool AppInitParameterInteraction()
         dustRelayFee = CFeeRate(n);
     }
 
-//DATACOIN CHECKPOINTSYNC	
-//    if (gArgs.IsArgSet("-checkpointkey")) // ppcoin: checkpoint master priv key
-//    {
-//        if (!SetCheckpointPrivKey(gArgs.GetArg("-checkpointkey", "")))
-//            return InitError(_("Unable to sign checkpoint, wrong checkpointkey?"));
-//    }
-
-
     fRequireStandard = !gArgs.GetBoolArg("-acceptnonstdtxn", !chainparams.RequireStandard());
     if (chainparams.RequireStandard() && !fRequireStandard)
         return InitError(strprintf("acceptnonstdtxn is not currently supported for %s chain", chainparams.NetworkIDString()));
@@ -1738,17 +1730,6 @@ bool AppInitMain()
     }
 
     connOptions.vSeedNodes = gArgs.GetArgs("-seednode");
-
-    // hardcoded seednode
-//    if (!fTestNet) {
-//        connOptions.vSeedNodes.push_back("94.130.220.2");
-//        connOptions.vSeedNodes.push_back("45.63.115.238");
-//		connOptions.vSeedNodes.push_back("78.46.37.209");
-//		connOptions.vSeedNodes.push_back("148.251.2.141");
-//		connOptions.vSeedNodes.push_back("119.9.108.125");
-//    }
-    connOptions.vSeedNodes.push_back("192.168.2.9"); //DATACOIN NODES
-
 
     // Initiate outbound connections unless connect=0
     connOptions.m_use_addrman_outgoing = !gArgs.IsArgSet("-connect");

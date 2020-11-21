@@ -16,8 +16,8 @@ std::vector<std::pair<uint256, CTransactionRef>> extra_txn;
 
 struct RegtestingSetup : public TestingSetup {
     RegtestingSetup() : TestingSetup(CBaseChainParams::REGTEST) {
-    //DATACOIN ADDED
-    // Primecoin: Generate prime table when starting up
+    // NOTE: DATACOIN added
+    // NOTE: PRIMECOIN Generate prime table when starting up
     GeneratePrimeTable();
     InitPrimeMiner();
     }
@@ -31,14 +31,14 @@ static CBlock BuildBlockTestCase() {
     tx.vin.resize(1);
     tx.vin[0].scriptSig.resize(10);
     tx.vout.resize(1);
-    tx.vout[0].nValue = 5 * CENT; //DATACOIN CHANGED
+    tx.vout[0].nValue = 5 * CENT; // NOTE: DATACOIN changed
 
     block.vtx.resize(3);
     block.vtx[0] = MakeTransactionRef(tx);
     block.nVersion = 42;
     block.hashPrevBlock = InsecureRand256();
-    block.nBits = TargetFromInt(1); // 0x207fffff; //DATACOIN CHANGED
-    block.bnPrimeChainMultiplier = Params().GenesisBlock().bnPrimeChainMultiplier;//DATACOIN MINER
+    block.nBits = TargetFromInt(1); // 0x207fffff; // NOTE: DATACOIN changed
+    block.bnPrimeChainMultiplier = Params().GenesisBlock().bnPrimeChainMultiplier;// NOTE: DATACOIN miner
 
     tx.vin[0].prevout.hash = InsecureRand256();
     tx.vin[0].prevout.n = 0;
@@ -290,15 +290,15 @@ BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)
     coinbase.vin.resize(1);
     coinbase.vin[0].scriptSig.resize(10);
     coinbase.vout.resize(1);
-    coinbase.vout[0].nValue = 5 * CENT; //DATACOIN CHANGED
+    coinbase.vout[0].nValue = 5 * CENT; // NOTE: DATACOIN changed
 
     CBlock block;
     block.vtx.resize(1);
     block.vtx[0] = MakeTransactionRef(std::move(coinbase));
     block.nVersion = 42;
     block.hashPrevBlock = InsecureRand256();
-    block.nBits = TargetFromInt(1); // 0x207fffff; //DATACOIN CHANGED
-    block.bnPrimeChainMultiplier = Params().GenesisBlock().bnPrimeChainMultiplier;//DATACOIN MINER
+    block.nBits = TargetFromInt(1); // 0x207fffff; // NOTE: DATACOIN changed
+    block.bnPrimeChainMultiplier = Params().GenesisBlock().bnPrimeChainMultiplier;// NOTE: DATACOIN miner
 
     bool mutated;
     block.hashMerkleRoot = BlockMerkleRoot(block, &mutated);

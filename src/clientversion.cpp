@@ -41,11 +41,10 @@ const std::string CLIENT_NAME("Datoshi");
 #include <obj/build.h>
 #endif
 
-//! git will put "#define GIT_ARCHIVE 1" on the next line inside archives. 
-#define GIT_ARCHIVE 1
+//! git will put "#define GIT_ARCHIVE 1" on the next line inside archives. $Format:%n#define GIT_ARCHIVE 1$
 #ifdef GIT_ARCHIVE
-#define GIT_COMMIT_ID "13f53b750dc"
-#define GIT_COMMIT_DATE "Thu, 19 Oct 2017 15:01:43 +0200"
+#define GIT_COMMIT_ID "$Format:%h$"
+#define GIT_COMMIT_DATE "$Format:%cD$"
 #endif
 
 #define BUILD_DESC_WITH_SUFFIX(maj, min, rev, build, suffix) \
@@ -99,8 +98,5 @@ std::string FormatSubVersion(const std::string& name, int nClientVersion, const 
         ss << ")";
     }
     ss << "/";
-//	ss << "Datacoin:" << FormatVersion(nClientVersion);
-//    //ss << "(" << CLIENT_BUILD << ")/"; 
-//	ss << "/";
     return ss.str();
 }

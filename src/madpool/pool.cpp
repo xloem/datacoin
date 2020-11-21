@@ -54,9 +54,9 @@ PrimeWorker::PrimeWorker(CWallet* pwallet, unsigned threadid, unsigned target)
 	mServerStats.set_workers(0);
 	
 	//Each thread has its own key and counter
-    //DATACOIN MINER
-	//DATACOIN OPTIMIZE? Реализовать повторные использования адресов 
-	//или майнинг на единый адрес? Большое количество адресов способно замедлить кошелек
+
+	// TODO: DATACOIN optimize? Implement address reuse or mining to a single address?
+	// A large number of addresses can slow down the wallet.
     pwallet->GetScriptForMining(coinbase_script);
 	
 	// If the keypool is exhausted, no script is returned at all.  Catch this.
@@ -396,7 +396,7 @@ int PrimeWorker::FlushStats() {
 	}
 	
 	//mServerStats.PrintDebugString();
-	//DATACOIN OPTIMIZE?
+	// TODO: DATACOIN optimize?
 	//LogPrintf("[PrimeServer] %d workers, %d ms latency, %.2f chains/day\n", mWorkerCount, (int)latency, (float)cpd);
 	
 	mServerStats.mutable_reqstats()->Clear();
@@ -550,9 +550,9 @@ int PrimeWorker::HandleRequest(zsock_t* item) {
 			CBlock *pblock = &mBlockTemplate->block;
 			extraNonce--;
 			IncrementExtraNonce(pblock, mIndexPrev, extraNonce);
-			//DATACOIN MINER //DATACOIN OLDCLIENT 
-			//К сожалению текущий майнер не передает версию в сеть и считает nVersion==2
-			//Нужна правка клиента xpmclient
+			// NOTE: DATACOIN miner 
+			// Unfortunately, the current miner does not transmit the version to the network
+			// and considers nVersion == 2. Need to edit the xpmclient client to suit
 			pblock->nVersion=2; 
 			pblock->nTime = share.time();
 			pblock->nBits = share.bits();
@@ -581,7 +581,7 @@ int PrimeWorker::HandleRequest(zsock_t* item) {
 			//unsigned int nChainLength = 0;
 			//bool isblock = ProbablePrimeChainTestForMiner(bnChainOrigin, pblock->nBits, nCandidateType+1, nChainLength);
 			//unsigned int nChainLengthCunningham1, nChainLengthCunningham2, nChainLengthBiTwin;
-			//DATACOIN OPTIMIZE? or ferma test = false?
+			// TODO: DATACOIN optimize ? or fermat test = false?
 			//bool isblock = ProbablePrimeChainTest(bnChainOrigin, pblock->nBits, true, nChainLengthCunningham1, nChainLengthCunningham2, nChainLengthBiTwin);
 			
 			bool isblock = CheckWork(pblock, *mWallet, coinbase_script, true);
@@ -746,8 +746,8 @@ PoolServer::PoolServer(CWallet* pwallet) {
 	mWorkerSignals = zsock_new(ZMQ_PUB);
 	zsock_bind(mWorkerSignals, "inproc://bitcoin");
 	
-	mMinShare = gArgs.GetArg("-minshare", 9); //DATACOIN MINER //DATACOIN OPTIMIZE? was 8
-	mTarget = gArgs.GetArg("-target", 9); //DATACOIN MINER //DATACOIN OPTIMIZE? was 10
+	mMinShare = gArgs.GetArg("-minshare", 9); // NOTE: DATACOIN miner optimize? was 8
+	mTarget = gArgs.GetArg("-target", 9); // NOTE: DATACOIN miner optimize? was 10
 	
 	//int nThreads = gArgs.GetArg("-genproclimit", 1);
 	//int nThreads = 1;
@@ -791,7 +791,7 @@ PoolServer::~PoolServer(){
 
 void PoolServer::NotifyNewBlock(CBlockIndex* pindex) {
 	
-	//DATACOIN OPTIMIZE?
+	// TODO: DATACOIN optimize?
 	//LogPrintf("[PrimeServer] NotifyNewBlock, height=%d\n", pindex->nHeight);
 	
 	proto::Signal sig;

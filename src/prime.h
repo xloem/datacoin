@@ -17,7 +17,7 @@
 #include <boost/timer/timer.hpp>
 
 /**********************/
-/* DATACOIN PROTOCOL */
+/* DATACOIN procol */
 /**********************/
 
 extern std::vector<unsigned int> vPrimes;
@@ -140,7 +140,7 @@ std::string GetPrimeOriginPrimorialForm(CBigNum& bnPrimeChainOrigin);
 
 
 /********************/
-/* DATACOIN MINING */
+/* DATACOIN mining */
 /********************/
 
 class CSieveOfEratosthenes;

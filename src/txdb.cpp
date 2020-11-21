@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2020 The Datacoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -292,12 +293,12 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
                 pindexNew->nTx            = diskindex.nTx;
                 pindexNew->nDataSize      = diskindex.nDataSize;
 
-                //DATACOIN OPTIMIZE? Понятно почему XPM отключили это. У них не было ("It's clear why XPM turned it off. They didn't have") bnPrimeChainMultiplier.
-                //Но у нас есть. Включить? Замедлит загрузку. Замерить на сколько.
-                // ("But we have. Enable? Slows down the download. Measure by how much.")
-                // Primecoin: disabled proof-of-work check for loading block index
-                //if (!CheckProofOfWork(pindexNew->GetBlockHeaderHash(), pindexNew->nBits, consensusParams))
-                //    return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
+                // NOTE: DATACOIN optimize?
+                // It's clear why XPM turned it off. They didn't have bnPrimeChainMultiplier.
+                // But we have. Enable? Slows down the download. Measure by how much.
+                // NOTE: PRIMECOIN disabled proof-of-work check for loading block index
+                // if (!CheckProofOfWork(pindexNew->GetBlockHeaderHash(), pindexNew->nBits, consensusParams))
+                //     return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
 
                 pcursor->Next();
             } else {

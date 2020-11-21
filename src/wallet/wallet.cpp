@@ -2842,7 +2842,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
 
                 CAmount nChange = nValueIn - nValueToSelect;
 
-				// ppcoin: sub-cent change is moved to fee
+				// NOTE: PPCOIN sub-cent change is moved to fee
                 if (nChange > 0 && nChange < MIN_TXOUT_AMOUNT)
                 {
                     nFeeRet += nChange;
@@ -2891,10 +2891,10 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 // to avoid conflicting with other possible uses of nSequence,
                 // and in the spirit of "smallest possible change from prior
                 // behavior."
-                //DATACOIN OLDCLIENT Костыль из за старых клиентов. Создаем транзакции старого формата. Потом вернуть как было.
-                // ("Crutch from for old customers. Create a transaction of the old format. Then return as it was.")
+                // NOTE: DATACOIN OLDCLIENT support for old clients w.r.t rbf.
+                // Create a transaction of the old format. Then return as it was.
                 const uint32_t nSequence = CTxIn::SEQUENCE_FINAL;
-                //const uint32_t nSequence = coin_control.signalRbf ? MAX_BIP125_RBF_SEQUENCE : (CTxIn::SEQUENCE_FINAL - 1);
+                // const uint32_t nSequence = coin_control.signalRbf ? MAX_BIP125_RBF_SEQUENCE : (CTxIn::SEQUENCE_FINAL - 1);
                 for (const auto& coin : setCoins)
                     txNew.vin.push_back(CTxIn(coin.outpoint,CScript(),
                                               nSequence));

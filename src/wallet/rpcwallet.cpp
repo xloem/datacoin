@@ -1186,9 +1186,9 @@ UniValue sendmany(const JSONRPCRequest& request)
     std::string txdata;
     if (!request.params[8].isNull() && request.params[8].type() != UniValue::VNULL && !request.params[8].get_str().empty()) {
        txdata = request.params[8].get_str();
-	    //DATACOIN REMOVED Корректная проверка размера будет позднее ("Correct size check will be later") в CreateTransaction
-        //if (txdata.length() > MAX_TX_DATA_SIZE)
-        //    throw JSONRPCError(RPC_INVALID_PARAMETER, "data chunk is too long. split it the payload to several transactions.");
+	    // NOTE: DATACOIN removed. Size check will be performed later in CreateTransaction.
+        // if (txdata.length() > MAX_TX_DATA_SIZE)
+        //     throw JSONRPCError(RPC_INVALID_PARAMETER, "data chunk is too long. split it the payload to several transactions.");
     }
 
     std::set<CTxDestination> destinations;
@@ -3617,7 +3617,7 @@ extern UniValue removeprunedfunds(const JSONRPCRequest& request);
 extern UniValue importmulti(const JSONRPCRequest& request);
 extern UniValue rescanblockchain(const JSONRPCRequest& request);
 
-//DATACOIN ADDED
+// NOTE: DATACOIN added
 extern double GetHashDifficulty(unsigned int nProofOfWorkType, const CBlockIndex* blockindex);
 extern UniValue makekeypair(const JSONRPCRequest& request);
 extern UniValue sendalert(const JSONRPCRequest& request);
