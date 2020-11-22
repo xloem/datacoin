@@ -45,8 +45,6 @@ bench_bench_bitcoin_LDADD = \
   $(LIBSECP256K1) \
   $(LIBUNIVALUE) \
   -lgmp \
-  -lboost_timer \
-  -lczmq \
   -lprotobuf
 
 if ENABLE_ZMQ

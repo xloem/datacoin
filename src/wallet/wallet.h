@@ -1047,7 +1047,7 @@ public:
 
     const std::string& GetAccountName(const CScript& scriptPubKey) const;
 
-    void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
+    void GetScriptForMining(std::shared_ptr<CReserveScript> &script) override;
     
     unsigned int GetKeyPoolSize()
     {

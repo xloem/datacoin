@@ -43,7 +43,6 @@
 #include <versionbits.h>
 #include <warnings.h>
 #include <prime/prime.h>
-#include <madpool/primeserver.h> // NOTE: DATACOIN pool
 
 #include <future>
 #include <sstream>
@@ -2717,10 +2716,6 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
         if (ShutdownRequested())
             break;
     } while (pindexNewTip != pindexMostWork);
-
-    // NOTE: DATACOIN pool
-    if (gPrimeServer && !fInitialDownload && !fShutdownRequested)
-        gPrimeServer->NotifyNewBlock(pindexNewTip);
 
     CheckBlockIndex(chainparams.GetConsensus());
 
