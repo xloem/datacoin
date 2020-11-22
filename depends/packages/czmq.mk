@@ -1,8 +1,8 @@
 package=czmq
-$(package)_version=4.0.1
+$(package)_version=3.0.2
 $(package)_download_path=https://github.com/zeromq/czmq/releases/download/v$($(package)_version)/
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
-$(package)_sha256_hash=0fc7294d983df7c2d6dc9b28ad7cd970377d25b33103aa82932bdb7fa6207215
+$(package)_sha256_hash=8bca39ab69375fa4e981daf87b3feae85384d5b40cef6adbe9d5eb063357699a
 $(package)_dependencies=zeromq
 
 define $(package)_set_vars
