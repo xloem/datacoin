@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <string>
 
-#define PRIMECOIN_PORT   4777
 #define RPC_PORT         11777 
 #define TESTNET_PORT     4776
 #define TESTNET_RPC_PORT 11776
