@@ -52,7 +52,7 @@
     </message>
     </context>
 <context>
-    <name>BitcoinGUI</name>
+    <name>DatacoinGUI</name>
     <message>
         <source>&amp;Overview</source>
         <translation>&amp;கண்ணோட்டம்</translation>
@@ -91,7 +91,7 @@
     </message>
     <message>
         <source>Datacoin</source>
-        <translation>Datacoin</translation>
+        <translation>டேட்டாகோயின்</translation>
     </message>
     <message>
         <source>Wallet</source>
@@ -225,8 +225,8 @@
         <translation>நல்வரவு</translation>
     </message>
     <message>
-        <source>Bitcoin</source>
-        <translation>Bitcoin</translation>
+        <source>Datacoin</source>
+        <translation>டேட்டாகோயின்</translation>
     </message>
     <message>
         <source>Error</source>
@@ -706,10 +706,10 @@
     <name>WalletView</name>
     </context>
 <context>
-    <name>datacoin-core</name>
+    <name>bitcoin-core</name>
     <message>
         <source>Datacoin Core</source>
-        <translation>Datacoin மையம்</translation>
+        <translation>டேட்டாகோயின் மையம்</translation>
     </message>
     <message>
         <source>(default: %u)</source>

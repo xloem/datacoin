@@ -62,12 +62,12 @@
         <translation>Địa chỉ nhận</translation>
     </message>
     <message>
-        <source>These are your Bitcoin addresses for sending payments. Always check the amount and the receiving address before sending coins.</source>
-        <translation>Đây là các địa chỉ Bitcoin để gửi bạn gửi tiền. Trước khi gửi bạn nên kiểm tra lại số tiền bạn muốn gửi và địa chỉ bitcoin của người nhận.</translation>
+        <source>These are your Datacoin addresses for sending payments. Always check the amount and the receiving address before sending coins.</source>
+        <translation>Đây là các địa chỉ Xu dữ liệu để gửi bạn gửi tiền. Trước khi gửi bạn nên kiểm tra lại số tiền bạn muốn gửi và địa chỉ bitcoin của người nhận.</translation>
     </message>
     <message>
-        <source>These are your Bitcoin addresses for receiving payments. It is recommended to use a new receiving address for each transaction.</source>
-        <translation>Đây là các địa chỉ Bitcoin để bạn nhận tiền. Với mỗi giao dịch, bạn nên dùng một địa chỉ Bitcoin mới để nhận tiền.</translation>
+        <source>These are your Datacoin addresses for receiving payments. It is recommended to use a new receiving address for each transaction.</source>
+        <translation>Đây là các địa chỉ Xu dữ liệu để bạn nhận tiền. Với mỗi giao dịch, bạn nên dùng một địa chỉ Xu dữ liệu mới để nhận tiền.</translation>
     </message>
     <message>
         <source>&amp;Copy Address</source>
@@ -225,7 +225,7 @@ Ví của bạn chưa được mã hóa.</translation>
     </message>
 </context>
 <context>
-    <name>BitcoinGUI</name>
+    <name>DatacoinGUI</name>
     <message>
         <source>Sign &amp;message...</source>
         <translation>Chứ ký &amp; Tin nhắn...</translation>
@@ -332,7 +332,7 @@ Ví của bạn chưa được mã hóa.</translation>
     </message>
     <message>
         <source>Send coins to a Datacoin address</source>
-        <translation>Gửi coins đến tài khoản Datacoin</translation>
+        <translation>Gửi coins đến tài khoản Xu dữ liệu</translation>
     </message>
     <message>
         <source>Backup wallet to another location</source>
@@ -356,7 +356,7 @@ Ví của bạn chưa được mã hóa.</translation>
     </message>
     <message>
         <source>Datacoin</source>
-        <translation>Datacoin</translation>
+        <translation>Xu dữ liệu</translation>
     </message>
     <message>
         <source>Wallet</source>
@@ -384,11 +384,11 @@ Ví của bạn chưa được mã hóa.</translation>
     </message>
     <message>
         <source>Sign messages with your Datacoin addresses to prove you own them</source>
-        <translation>Dùng địa chỉ Datacoin của bạn ký các tin nhắn để xác minh những nội dung tin nhắn đó là của bạn.</translation>
+        <translation>Dùng địa chỉ Xu dữ liệu của bạn ký các tin nhắn để xác minh những nội dung tin nhắn đó là của bạn.</translation>
     </message>
     <message>
         <source>Verify messages to ensure they were signed with specified Datacoin addresses</source>
-        <translation>Kiểm tra các tin nhắn để chắc chắn rằng chúng được ký bằng các địa chỉ Datacoin xác định.</translation>
+        <translation>Kiểm tra các tin nhắn để chắc chắn rằng chúng được ký bằng các địa chỉ Xu dữ liệu xác định.</translation>
     </message>
     <message>
         <source>&amp;File</source>
@@ -407,8 +407,8 @@ Ví của bạn chưa được mã hóa.</translation>
         <translation>Thanh công cụ (toolbar)</translation>
     </message>
     <message>
-        <source>Request payments (generates QR codes and datacoin: URIs)</source>
-        <translation>Yêu cầu thanh toán(tạo mã QR và địa chỉ Datacoin: URLs)</translation>
+        <source>Request payments (generates QR codes and bitcoin: URIs)</source>
+        <translation>Yêu cầu thanh toán(tạo mã QR và địa chỉ datacoin: URLs)</translation>
     </message>
     <message>
         <source>Show the list of used sending addresses and labels</source>
@@ -419,16 +419,16 @@ Ví của bạn chưa được mã hóa.</translation>
         <translation>Hiện thỉ danh sách các địa chỉ và nhãn đã dùng để nhận.</translation>
     </message>
     <message>
-        <source>Open a datacoin: URI or payment request</source>
-        <translation>Mở datacoin:URL hoặc yêu cầu thanh toán</translation>
+        <source>Open a bitcoin: URI or payment request</source>
+        <translation>Mở bitcoin:URL hoặc yêu cầu thanh toán</translation>
     </message>
     <message>
         <source>&amp;Command-line options</source>
         <translation>7Tùy chọn dòng lệnh</translation>
     </message>
     <message numerus="yes">
-        <source>%n active connection(s) to Bitcoin network</source>
-        <translation><numerusform>%n liên kết hoạt động với mạng lưới Bitcoin</numerusform></translation>
+        <source>%n active connection(s) to Datacoin network</source>
+        <translation><numerusform>%n liên kết hoạt động với mạng lưới Xu dữ liệu</numerusform></translation>
     </message>
     <message>
         <source>Indexing blocks on disk...</source>
@@ -471,8 +471,8 @@ Ví của bạn chưa được mã hóa.</translation>
         <translation>Đã cập nhật</translation>
     </message>
     <message>
-        <source>Show the %1 help message to get a list with possible Bitcoin command-line options</source>
-        <translation>Hiển thị tin nhắn trợ giúp %1 để có được danh sách với các tùy chọn dòng lệnh Bitcoin.</translation>
+        <source>Show the %1 help message to get a list with possible Datacoin command-line options</source>
+        <translation>Hiển thị tin nhắn trợ giúp %1 để có được danh sách với các tùy chọn dòng lệnh Xu dữ liệu.</translation>
     </message>
     <message>
         <source>Connecting to peers...</source>
@@ -652,8 +652,8 @@ Ví của bạn chưa được mã hóa.</translation>
         <translation>Sử dụng vị trí dữ liệu mặc định</translation>
     </message>
     <message>
-        <source>Bitcoin</source>
-        <translation>Bitcoin</translation>
+        <source>Datacoin</source>
+        <translation>Xu dữ liệu</translation>
     </message>
     <message>
         <source>Error</source>
@@ -706,7 +706,7 @@ Ví của bạn chưa được mã hóa.</translation>
     </message>
     <message>
         <source>Connect to the Datacoin network through a SOCKS5 proxy.</source>
-        <translation>Kết nối đến máy chủ Datacoin thông qua SOCKS5 proxy.</translation>
+        <translation>Kết nối đến máy chủ Xu dữ liệu thông qua SOCKS5 proxy.</translation>
     </message>
     <message>
         <source>Proxy &amp;IP:</source>
@@ -1217,14 +1217,14 @@ Ví của bạn chưa được mã hóa.</translation>
     </message>
     </context>
 <context>
-    <name>datacoin-core</name>
+    <name>bitcoin-core</name>
     <message>
         <source>Options:</source>
         <translation>Lựa chọn:</translation>
     </message>
     <message>
         <source>Datacoin Core</source>
-        <translation>Datacoin Core</translation>
+        <translation>Xu dữ liệu Core</translation>
     </message>
     <message>
         <source>(default: %u)</source>

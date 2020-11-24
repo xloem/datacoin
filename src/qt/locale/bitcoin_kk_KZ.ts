@@ -48,7 +48,7 @@
     <name>BanTableModel</name>
     </context>
 <context>
-    <name>BitcoinGUI</name>
+    <name>DatacoinGUI</name>
     <message>
         <source>&amp;Transactions</source>
         <translation>&amp;Транзакциялар</translation>
@@ -71,7 +71,7 @@
     </message>
     <message>
         <source>Datacoin</source>
-        <translation>Datacoin</translation>
+        <translation>Датакоин</translation>
     </message>
     <message>
         <source>Wallet</source>
@@ -169,7 +169,7 @@
 <context>
     <name>Intro</name>
     <message>
-        <source>Bitcoin</source>
+        <source>Datacoin</source>
         <translation>Биткоин</translation>
     </message>
     <message>
