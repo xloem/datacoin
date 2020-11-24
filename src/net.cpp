@@ -3091,11 +3091,12 @@ CNode::~CNode()
 void CNode::AskFor(const CInv& inv)
 {
     if (mapAskFor.size() > MAPASKFOR_MAX_SZ || setAskFor.size() > SETASKFOR_MAX_SZ)
-	{	LogPrintf("CALL to AskFor FAILED. Overload.\n"); // NOTE: DATACOIN changed
-		return;}
+	{	LogPrint(BCLog::NET, "CALL to AskFor FAILED. Overload.\n"); // NOTE: DATACOIN changed
+		return;
+    }
     // a peer may not have multiple non-responded queue positions for a single inv item
     if (!setAskFor.insert(inv.hash).second) {
-        LogPrintf("CALL to AskFor. Already asked. Skip.\n"); // NOTE: DATACOIN changed
+        LogPrint(BCLog::NET, "CALL to AskFor. Already asked. Skip.\n"); // NOTE: DATACOIN changed
         return;
     }
 
