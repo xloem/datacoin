@@ -1175,7 +1175,6 @@ bool IsInitialBlockDownload()
     // Optimization: pre-test latch before taking the lock.
     if (latchToFalse.load(std::memory_order_relaxed))
         return false;
-
     LOCK(cs_main);
     if (latchToFalse.load(std::memory_order_relaxed))
         return false;
@@ -2640,7 +2639,9 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
     CBlockIndex *pindexMostWork = nullptr;
     CBlockIndex *pindexNewTip = nullptr;
     int nStopAtHeight = gArgs.GetArg("-stopatheight", DEFAULT_STOPATHEIGHT);
+    /* FIXME gjh unused - should it be?
     bool fInitialDownload = true;
+    */
     bool fShutdownRequested;
     do {
         boost::this_thread::interruption_point();
@@ -2651,7 +2652,7 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
         if (GetMainSignals().CallbacksPending() > 10) {
             // Block until the validation queue drains. This should largely
             // never happen in normal operation, however may happen during
-            // reindex, causing memory blowup  if we run too far ahead.
+            // reindex, causing memory blowup if we run too far ahead.
             SyncWithValidationInterfaceQueue();
         }
 
@@ -2716,7 +2717,6 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
         if (ShutdownRequested())
             break;
     } while (pindexNewTip != pindexMostWork);
-
     CheckBlockIndex(chainparams.GetConsensus());
 
     // Write changes periodically to disk, after relay.
@@ -3075,7 +3075,6 @@ static bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state,
     uint32_t nPrimeChainLength;
     if (fCheckPOW && !CheckProofOfWork(block.GetHeaderHash(), block.nBits, consensusParams, block.bnPrimeChainMultiplier, nPrimeChainType, nPrimeChainLength))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
-
     return true;
 }
 
@@ -3123,13 +3122,11 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     for (unsigned int i = 1; i < block.vtx.size(); i++)
         if (block.vtx[i]->IsCoinBase())
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-multiple", false, "more than one coinbase");
-
     // Check transactions
     for (const auto& tx : block.vtx)
         if (!CheckTransaction(*tx, state, true))
             return state.Invalid(false, state.GetRejectCode(), state.GetRejectReason(),
                                  strprintf("Transaction check failed (tx hash %s) %s", tx->GetHash().ToString(), state.GetDebugMessage()));
-
     unsigned int nSigOps = 0;
     for (const auto& tx : block.vtx)
     {
