@@ -146,7 +146,7 @@ OverviewPage::OverviewPage(const PlatformStyle *platformStyle, QWidget *parent) 
 
     connect(ui->listTransactions, SIGNAL(clicked(QModelIndex)), this, SLOT(handleTransactionClicked(QModelIndex)));
 
-    if (fTestNet) {
+    if (TestNet()) {
         QPixmap testnet_pixmap (":/icons/logo_testnet");
         ui->labelMainLogo->setPixmap(testnet_pixmap);
     }

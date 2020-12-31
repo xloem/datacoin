@@ -8,8 +8,18 @@
 
 #include <arith_uint256.h>
 #include <chain.h>
+#include <chainparams.h>
+#include <chainparamsbase.h>
 #include <primitives/block.h>
 #include <uint256.h>
+#include <util.h>
+
+bool TestNet()
+{
+    if (ChainNameFromCommandLine() == CBaseChainParams::TESTNET)
+        return true;
+    return false;
+}
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {

@@ -591,7 +591,7 @@ void static DatacoinCPUMiner(int nThread, int numThreads, const CChainParams& ch
     unsigned int nPrimorialMultiplierPrev = nPrimorialMultiplier; // previous primorial factor
 
     // Primecoin HP: Increase initial primorial
-    if (fTestNet)
+    if (TestNet())
         nPrimorialMultiplier = nInitialPrimorialMultiplierTestnet;
     else
         nPrimorialMultiplier = nInitialPrimorialMultiplier;

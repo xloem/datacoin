@@ -118,7 +118,7 @@ UniValue setsieveextensions(const JSONRPCRequest& request)
             "setsieveextensions <sieveextensions>\n"
             "<sieveextensions> determines the number of times the sieve will be extended.");
 
-    unsigned int nExtensions = (fTestNet) ? nDefaultSieveExtensionsTestnet : nDefaultSieveExtensions;
+    unsigned int nExtensions = TestNet() ? nDefaultSieveExtensionsTestnet : nDefaultSieveExtensions;
     if (request.params.size() > 0)
         nExtensions = request.params[0].get_int();
 

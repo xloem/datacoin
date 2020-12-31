@@ -42,7 +42,6 @@
 // Application startup time (used for uptime calculation)
 int64_t GetStartupTime();
 
-extern bool fTestNet;
 extern bool fDebug;
 
 static const bool DEFAULT_LOGTIMEMICROS = false;

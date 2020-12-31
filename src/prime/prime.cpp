@@ -4,6 +4,7 @@
 
 #include <prime/prime.h>
 #include <miner.h>
+#include <pow.h>
 #include <validation.h>
 #include <util.h>
 #include <climits>
@@ -23,7 +24,7 @@ static unsigned int int_invert(unsigned int a, unsigned int nPrime);
 
 void GeneratePrimeTable()
 {
-    const unsigned int nDefaultSieveExt = (fTestNet) ? nDefaultSieveExtensionsTestnet : nDefaultSieveExtensions;
+    const unsigned int nDefaultSieveExt = (TestNet()) ? nDefaultSieveExtensionsTestnet : nDefaultSieveExtensions;
     nSieveExtensions = (unsigned int) gArgs.GetArg("-sieveextensions", nDefaultSieveExt);
     nSieveExtensions = std::max(std::min(nSieveExtensions, nMaxSieveExtensions), nMinSieveExtensions);
     nSieveSize = (unsigned int)  gArgs.GetArg("-sievesize", nDefaultSieveSize);

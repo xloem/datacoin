@@ -15,6 +15,8 @@ class CBlockHeader;
 class CBlockIndex;
 class uint256;
 
+bool TestNet();
+
 /* Determine the next difficulty for the succeeding block */
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params&);
