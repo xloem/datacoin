@@ -58,6 +58,8 @@ MiningPage::MiningPage(const PlatformStyle *platformStyle, QWidget *parent) :
     ui->sliderCores->setMaximum(nMaxUseThreads);
     ui->sliderCores->setValue(nMaxUseThreads);
     ui->labelNCores->setText(QString("%1").arg(nMaxUseThreads));
+    const unsigned int nDefaultSieveExt = (TestNet()) ? nDefaultSieveExtensionsTestnet : nDefaultSieveExtensions;
+    ui->sieveextensionsValue->setText(QString("%1").arg(nDefaultSieveExt));
     ui->sliderGraphSampleTime->setMaximum(0);
     ui->sliderGraphSampleTime->setMaximum(6);
 
