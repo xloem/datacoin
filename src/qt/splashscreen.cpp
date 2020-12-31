@@ -12,6 +12,7 @@
 
 #include <clientversion.h>
 #include <init.h>
+#include <pow.h>
 #include <util.h>
 #include <ui_interface.h>
 #include <version.h>
@@ -54,7 +55,9 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle *networkStyle) 
     //pixmap = QPixmap(splashSize);
 	
 	// load the bitmap for writing some text over it
-	pixmap = QPixmap(":/images/splash_datacoin");
+    pixmap = (TestNet()) ? QPixmap(":/images/testnet_splash") : QPixmap(":/images/splash");
+
+	// pixmap = QPixmap(":/images/splash");
 
 #if QT_VERSION > 0x050100
     // change to HiDPI if it makes sense
