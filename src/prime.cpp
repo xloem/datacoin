@@ -2,9 +2,8 @@
 // Distributed under conditional MIT/X11 software license,
 // see the accompanying file COPYING
 
-#include <prime/prime.h>
+#include <prime.h>
 #include <miner.h>
-#include <pow.h>
 #include <validation.h>
 #include <util.h>
 #include <climits>
@@ -24,7 +23,7 @@ static unsigned int int_invert(unsigned int a, unsigned int nPrime);
 
 void GeneratePrimeTable()
 {
-    const unsigned int nDefaultSieveExt = (TestNet()) ? nDefaultSieveExtensionsTestnet : nDefaultSieveExtensions;
+    const unsigned int nDefaultSieveExt = (fTestNet) ? nDefaultSieveExtensionsTestnet : nDefaultSieveExtensions;
     nSieveExtensions = (unsigned int) gArgs.GetArg("-sieveextensions", nDefaultSieveExt);
     nSieveExtensions = std::max(std::min(nSieveExtensions, nMaxSieveExtensions), nMinSieveExtensions);
     nSieveSize = (unsigned int)  gArgs.GetArg("-sievesize", nDefaultSieveSize);
@@ -151,7 +150,7 @@ void PrintCompactStatistics(volatile unsigned int vFoundChainCounter[nMaxChainLe
             strOutput += strprintf(" %uch: %u", i + 1, iout);
 		}
     }
-    LogPrintf("%s\n", strOutput.c_str());
+    printf("%s\n", strOutput.c_str());
 
     // Reset the statistics
     for (unsigned int i = 0; i < nMaxChainLength; i++)
@@ -316,10 +315,10 @@ std::string TargetToString(unsigned int nBits)
     return strprintf("%02x.%06x", TargetGetLength(nBits), TargetGetFractional(nBits));
 }
 
-//unsigned int TargetFromInt(unsigned int nLength)
-//{
-//    return (nLength << nFractionalBits);
-//}
+unsigned int TargetFromInt(unsigned int nLength)
+{
+    return (nLength << nFractionalBits);
+}
 
 // Get mint value from target
 // Datacoin mint rate is determined by target
@@ -359,8 +358,8 @@ bool TargetGetNext(unsigned int nBits, int64_t nInterval, int64_t nTargetSpacing
     if (bnFractionalDifficulty < nFractionalDifficultyMin)
         bnFractionalDifficulty = nFractionalDifficultyMin;
     uint64_t nFractionalDifficultyNew = bnFractionalDifficulty.getuint256().GetUint64(0);
-    if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printtarget", false))
-        LogPrintf("TargetGetNext() : nActualSpacing=%d nFractionDiff=%016llx nFractionDiffNew=%016llx\n", (int)nActualSpacing, (long long unsigned int)nFractionalDifficulty, (long long unsigned int)nFractionalDifficultyNew);
+    if (fDebug && gArgs.GetBoolArg("-printtarget", false))
+        printf("TargetGetNext() : nActualSpacing=%d nFractionDiff=%016llx nFractionDiffNew=%016llx\n", (int)nActualSpacing, (long long unsigned int)nFractionalDifficulty, (long long unsigned int)nFractionalDifficultyNew);
     // Step up length if fractional past threshold
     if (nFractionalDifficultyNew > nFractionalDifficultyThreshold)
     {
@@ -517,14 +516,14 @@ bool ProbablePrimeChainTest(const CBigNum& bnPrimeChainOrigin, unsigned int nBit
 }
 
 // Check prime proof-of-work
-bool CheckPrimeProofOfWork(uint256 hashBlockHeader, unsigned int nBits, const CBigNum& bnPrimeChainMultiplier, unsigned int& nChainType, unsigned int& nChainLength, bool fSilent)
+bool CheckPrimeProofOfWork(uint256 hashBlockHeader, unsigned int nBits, const CBigNum& bnPrimeChainMultiplier, unsigned int& nChainType, unsigned int& nChainLength)
 {
     // Check target
     if (TargetGetLength(nBits) < Params().GetConsensus().nTargetMinLength || TargetGetLength(nBits) > 99)
         return error("CheckPrimeProofOfWork() : invalid chain length target %s", TargetToString(nBits).c_str());
 
     // Check header hash limit
-    if (UintToArith256(hashBlockHeader) < hashBlockHeaderLimit) // TODO: DATACOIN optimize?
+    if (hashBlockHeader < hashBlockHeaderLimit)
         return error("CheckPrimeProofOfWork() : block header hash under limit");
     // Check target for prime proof-of-work
     CBigNum bnPrimeChainOrigin = CBigNum(hashBlockHeader) * bnPrimeChainMultiplier;
@@ -539,7 +538,7 @@ bool CheckPrimeProofOfWork(uint256 hashBlockHeader, unsigned int nBits, const CB
     unsigned int nChainLengthCunningham2 = 0;
     unsigned int nChainLengthBiTwin = 0;
     if (!ProbablePrimeChainTest(bnPrimeChainOrigin, nBits, false, nChainLengthCunningham1, nChainLengthCunningham2, nChainLengthBiTwin))
-        return fSilent ? false : error("CheckPrimeProofOfWork() : failed prime chain test target=%s length=(%s %s %s)", TargetToString(nBits).c_str(),
+        return error("CheckPrimeProofOfWork() : failed prime chain test target=%s length=(%s %s %s)", TargetToString(nBits).c_str(),
             TargetToString(nChainLengthCunningham1).c_str(), TargetToString(nChainLengthCunningham2).c_str(), TargetToString(nChainLengthBiTwin).c_str());
     if (nChainLengthCunningham1 < nBits && nChainLengthCunningham2 < nBits && nChainLengthBiTwin < nBits)
         return error("CheckPrimeProofOfWork() : prime chain length assert target=%s length=(%s %s %s)", TargetToString(nBits).c_str(),
@@ -618,7 +617,7 @@ unsigned int EstimateWorkTransition(unsigned int nPrevWorkTransition, unsigned i
 }
 
 /********************/
-/* DATACOIN MINING */
+/* DATACOIN mining  */
 /********************/
 
 // Check Fermat probable primality test (2-PRP): 2 ** (n-1) = 1 (mod n)
@@ -863,7 +862,7 @@ static void SieveDebugChecks(unsigned int nBits, unsigned int nTriedMultiplier, 
                 {
                     std::string strHash = mpzHash.get_str();
                     std::string strFixedMultiplier = mpzFixedMultiplier.get_str();
-                    LogPrintf("SIEVE BUG: %s * %s * %u * 2^%u - 1 is divisible by %u!\n", strHash.c_str(), strFixedMultiplier.c_str(), nTriedMultiplier, nChainPosition, vPrimes[nPrimeSeq]);
+                    printf("SIEVE BUG: %s * %s * %u * 2^%u - 1 is divisible by %u!\n", strHash.c_str(), strFixedMultiplier.c_str(), nTriedMultiplier, nChainPosition, vPrimes[nPrimeSeq]);
                 }
             }
         }
@@ -883,7 +882,7 @@ static void SieveDebugChecks(unsigned int nBits, unsigned int nTriedMultiplier, 
                 {
                     std::string strHash = mpzHash.get_str();
                     std::string strFixedMultiplier = mpzFixedMultiplier.get_str();
-                    LogPrintf("SIEVE BUG: %s * %s * %u * 2^%u + 1 is divisible by %u!\n", strHash.c_str(), strFixedMultiplier.c_str(), nTriedMultiplier, nChainPosition, vPrimes[nPrimeSeq]);
+                    printf("SIEVE BUG: %s * %s * %u * 2^%u + 1 is divisible by %u!\n", strHash.c_str(), strFixedMultiplier.c_str(), nTriedMultiplier, nChainPosition, vPrimes[nPrimeSeq]);
                 }
             }
         }
@@ -892,7 +891,7 @@ static void SieveDebugChecks(unsigned int nBits, unsigned int nTriedMultiplier, 
     {
         std::string strHash = mpzHash.get_str();
         std::string strFixedMultiplier = mpzFixedMultiplier.get_str();
-        LogPrintf("SIEVE BUG: %s * %s * %u has unknown type!\n", strHash.c_str(), strFixedMultiplier.c_str(), nTriedMultiplier);
+        printf("SIEVE BUG: %s * %s * %u has unknown type!\n", strHash.c_str(), strFixedMultiplier.c_str(), nTriedMultiplier);
     }
 }
 
@@ -921,16 +920,16 @@ bool MineProbablePrimeChain(CBlock& block, mpz_class& mpzFixedMultiplier, bool& 
     if (!sieve.IsReady() || sieve.IsDepleted())
     {
         // Build sieve
-        if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining", false))
+        if (fDebug && gArgs.GetBoolArg("-printmining", false))
             nStart = GetTimeMicros();
         sieve.Reset(nSieveSize, nSieveFilterPrimes, nSieveExtensions, nL1CacheSize, nBits, mpzHash, mpzFixedMultiplier, pindexPrev);
         sieve.Weave();
-        if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining", false))
-            LogPrintf("MineProbablePrimeChain() : new sieve (%u/%u@%u%%) ready in %uus\n", sieve.GetCandidateCount(), nSieveSize, sieve.GetProgressPercentage(), (unsigned int) (GetTimeMicros() - nStart));
+        if (fDebug && gArgs.GetBoolArg("-printmining", false))
+            printf("MineProbablePrimeChain() : new sieve (%u/%u@%u%%) ready in %uus\n", sieve.GetCandidateCount(), nSieveSize, sieve.GetProgressPercentage(), (unsigned int) (GetTimeMicros() - nStart));
         return false; // sieve generation takes time so return now
     }
 
-    if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining2", false))
+    if (fDebug && gArgs.GetBoolArg("-printmining2", false))
         nStart = GetTimeMicros();
 
     // Number of candidates to be tested during a single call to this function
@@ -944,8 +943,8 @@ bool MineProbablePrimeChain(CBlock& block, mpz_class& mpzFixedMultiplier, bool& 
         if (!sieve.GetNextCandidateMultiplier(nTriedMultiplier, nCandidateType))
         {
             // power tests completed for the sieve
-            if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining2", false))
-                LogPrintf("MineProbablePrimeChain() : %u tests (%u primes) in %uus\n", nTests, nPrimesHit, (unsigned int) (GetTimeMicros() - nStart));
+            if (fDebug && gArgs.GetBoolArg("-printmining2", false))
+                printf("MineProbablePrimeChain() : %u tests (%u primes) in %uus\n", nTests, nPrimesHit, (unsigned int) (GetTimeMicros() - nStart));
             fNewBlock = true; // notify caller to change nonce
             return false;
         }
@@ -954,7 +953,7 @@ bool MineProbablePrimeChain(CBlock& block, mpz_class& mpzFixedMultiplier, bool& 
         bool fChainFound = ProbablePrimeChainTestFast(mpzChainOrigin, testParams);
         unsigned int nChainPrimeLength = TargetGetLength(nChainLength);
 
-        if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-debugsieve", false))
+        if (fDebug && gArgs.GetBoolArg("-debugsieve", false))
             SieveDebugChecks(nBits, nTriedMultiplier, nCandidateType, mpzHash, mpzFixedMultiplier, mpzChainOrigin);
 
         // Collect mining statistics
@@ -971,15 +970,15 @@ bool MineProbablePrimeChain(CBlock& block, mpz_class& mpzFixedMultiplier, bool& 
             CBigNum bnPrimeChainMultiplier;
             bnPrimeChainMultiplier.SetHex(mpzPrimeChainMultiplier.get_str(16));
             block.bnPrimeChainMultiplier = bnPrimeChainMultiplier;
-            LogPrintf("nTriedMultiplier = %u\n", nTriedMultiplier); // Debugging
-            LogPrintf("Probable prime chain found for block=%s!!\n  Target: %s\n  Chain: %s\n", block.GetHash().GetHex().c_str(),
+            printf("nTriedMultiplier = %u\n", nTriedMultiplier); // Debugging
+            printf("Probable prime chain found for block=%s!!\n  Target: %s\n  Chain: %s\n", block.GetHash().GetHex().c_str(),
                 TargetToString(block.nBits).c_str(), GetPrimeChainName(nCandidateType, nChainLength).c_str());
             return true;
         }
     }
     
-    if ((gArgs.IsArgSet("-debug")) && gArgs.GetBoolArg("-printmining2", false))
-        LogPrintf("MineProbablePrimeChain() : %u tests (%u primes) in %uus\n", nTests, nPrimesHit, (unsigned int) (GetTimeMicros() - nStart));
+    if (fDebug && gArgs.GetBoolArg("-printmining2", false))
+        printf("MineProbablePrimeChain() : %u tests (%u primes) in %uus\n", nTests, nPrimesHit, (unsigned int) (GetTimeMicros() - nStart));
     
     return false; // stop as new block arrived
 }

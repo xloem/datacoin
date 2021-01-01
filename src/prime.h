@@ -17,7 +17,7 @@
 #include <boost/timer/timer.hpp>
 
 /**********************/
-/* DATACOIN PROTOCOL */
+/* DATACOIN procol */
 /**********************/
 
 extern std::vector<unsigned int> vPrimes;
@@ -38,7 +38,7 @@ static const unsigned int nMaxL1CacheSize = 128000u;
 static const unsigned int nDefaultL1CacheSize = 28672u;
 static const unsigned int nMinL1CacheSize = 12000u;
 extern unsigned int nL1CacheSize;
-static const arith_uint256 hashBlockHeaderLimit = arith_uint256(1) << 255;
+static const uint256 hashBlockHeaderLimit = ArithToUint256(arith_uint256(1) << 255);
 static const CBigNum bnOne = 1;
 static const CBigNum bnPrimeMax = (bnOne << 2000) - 1;
 static const CBigNum bnPrimeMin = (bnOne << 255);
@@ -116,8 +116,7 @@ unsigned int TargetGetFractional(unsigned int nBits);
 uint64_t TargetGetFractionalDifficulty(unsigned int nBits);
 bool TargetSetFractionalDifficulty(uint64_t nFractionalDifficulty, unsigned int& nBits);
 std::string TargetToString(unsigned int nBits);
-// TODO(gjh): DATACOIN miner It may be worth dividing prime into prime_miner (in server) and prime (in common)
-inline unsigned int TargetFromInt(unsigned int nLength) { return (nLength << nFractionalBits); }
+unsigned int TargetFromInt(unsigned int nLength);
 bool TargetGetMint(unsigned int nBits, uint64_t& nMint);
 bool TargetGetNext(unsigned int nBits, int64_t nInterval, int64_t nTargetSpacing, int64_t nActualSpacing, unsigned int& nBitsNext);
 
@@ -128,7 +127,7 @@ enum // prime chain type
     PRIME_CHAIN_CUNNINGHAM2 = 2u,
     PRIME_CHAIN_BI_TWIN     = 3u,
 };
-bool CheckPrimeProofOfWork(uint256 hashBlockHeader, unsigned int nBits, const CBigNum& bnPrimeChainMultiplier, unsigned int& nChainType, unsigned int& nChainLength, bool fSilent = false);
+bool CheckPrimeProofOfWork(uint256 hashBlockHeader, unsigned int nBits, const CBigNum& bnPrimeChainMultiplier, unsigned int& nChainType, unsigned int& nChainLength);
 
 // prime target difficulty value for visualization
 double GetPrimeDifficulty(unsigned int nBits);
@@ -141,7 +140,7 @@ std::string GetPrimeOriginPrimorialForm(CBigNum& bnPrimeChainOrigin);
 
 
 /********************/
-/* DATACOIN mining  */
+/* DATACOIN mining */
 /********************/
 
 class CSieveOfEratosthenes;

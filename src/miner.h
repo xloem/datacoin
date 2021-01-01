@@ -215,6 +215,7 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 
 bool CheckWork(CBlock* pblock, CWallet& wallet, std::shared_ptr<CReserveScript> reserve_script, int nThread, bool fSilent=false);
+bool MiniMiner(CBlock *pblock, CBlockIndex* pindexPrev, bool allowIncrementExtraNonce = false); // NOTE: DATACOIN added
 
 extern double dHashesPerSec;
 extern bool isMining;
