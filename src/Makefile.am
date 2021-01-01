@@ -542,6 +542,8 @@ endif
 %.pb.cc %.pb.h: %.proto
 	@test -f $(PROTOC)
 	$(AM_V_GEN) $(PROTOC) --cpp_out=$(@D) --proto_path=$(<D) $<
+%.pb.cpp: %.pb.cc
+	mv $< $@
 
 if EMBEDDED_LEVELDB
 include Makefile.leveldb.include
