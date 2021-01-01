@@ -31,6 +31,8 @@
 
 #include <stdint.h>
 
+#include <boost/bind.hpp>
+
 #include <QDebug>
 #include <QMessageBox>
 #include <QSet>
