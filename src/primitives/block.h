@@ -52,7 +52,7 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
-		READWRITE(bnPrimeChainMultiplier);
+        READWRITE(bnPrimeChainMultiplier);
     }
 
     void SetNull()
@@ -63,7 +63,7 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
-		bnPrimeChainMultiplier = 0;
+        bnPrimeChainMultiplier = 0;
     }
 
     bool IsNull() const
@@ -71,12 +71,11 @@ public:
         return (nBits == 0);
     }
 
-    // Primecoin: header hash does not include prime certificate
-    // Данный хеш используется для проверки POW. Включать в хэш bnPrimeChainMultiplier нельзя
-    // ("This hash is used to verify POW. Included in the hash bnPrimeChainMultiplier can not")
+    // NOTE: PRIMECOIN header hash does not include prime certificate
+    // This hash is used to check POW. As noted above, bnPrimeChainMultiplier hash isn't included
     uint256 GetHeaderHash() const
     {
-        //DATACOIN CHANGED Переделываем хеширование ("Remaking hashing")
+        // NOTE: DATACOIN changed. Changing hashing
         //return Hash(BEGIN(nVersion), END(nNonce));
 
         //CDataStream ss(SER_GETHASH, 0);
@@ -105,8 +104,8 @@ public:
 
     // memory only
     mutable bool fChecked;
-    mutable unsigned int nPrimeChainType;   // primecoin: chain type (memory-only)
-    mutable unsigned int nPrimeChainLength; // primecoin: chain length (memory-only)
+    mutable unsigned int nPrimeChainType;   // NOTE: PRIMECOIN chain type (memory-only)
+    mutable unsigned int nPrimeChainLength; // NOTE: PRIMECOIN chain length (memory-only)
 
     CBlock()
     {
@@ -146,8 +145,8 @@ public:
         block.nBits          = nBits;
         block.nNonce         = nNonce;
         block.bnPrimeChainMultiplier = bnPrimeChainMultiplier;
-        //DATACOIN OLDCLIENT !!! XPM не заполяет это поле. Исправить? ("XPM does not fill this field. Fix?")
-        //также ("also") CBlockIndex::GetBlockHeader()
+        // TODO(gjh): DATACOIN oldclient, XPM does not fill this field either. Fix?
+        // also CBlockIndex::GetBlockHeader()
         //block.bnPrimeChainMultiplier = bnPrimeChainMultiplier; 
         return block;
     }

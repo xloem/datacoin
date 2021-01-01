@@ -1,24 +1,31 @@
+// Copyright (c) 2020 The Datacoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <QDateTime>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <set>
 #include <qt/blockexplorer.h>
 #include <qt/forms/ui_blockexplorer.h>
-#include <utilstrencodings.h>
-#include <validation.h>
-#include <net.h>
-#include <txdb.h>
-#include <util.h>
-#include <ui_interface.h>
+
 #include <qt/bitcoinunits.h>
 #include <qt/clientmodel.h>
+
+#include <base58.h>
+#include <bignum.h>
 #include <chainparams.h>
-#include <core_io.h>
 #include <consensus/params.h>
+#include <core_io.h>
+#include <net.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
+#include <txdb.h>
+#include <ui_interface.h>
+#include <util.h>
+#include <utilstrencodings.h>
+#include <validation.h>
 #include <wallet/rpcwallet.h>
-#include <base58.h>
 
 extern double GetDifficulty(const CBlockIndex* blockindex = NULL);
 
@@ -68,8 +75,17 @@ static std::string ScriptToString(const CScript& Script, bool Long = false, bool
         else
             return makeHRef(address);
     }
-    else
-        return Long? "<pre>" + FormatScript(Script) + "</pre>" : _("Non-standard script");
+    else {
+        std::string scriptStr = ScriptToAsmStr(Script);
+        if (scriptStr.find(std::string("OP_RETURN ")) != std::string::npos) {
+            std::string decodedpayload = scriptStr.substr(10);
+            std::vector<unsigned char> parsedhexv = ParseHex(decodedpayload);
+            std::string parsedhex(parsedhexv.begin(), parsedhexv.end());
+            return Long? "<pre><span class='font-weight:bold;'>OP RETURN data: </span>" + parsedhex + "</pre>" : _("Non-standard script");
+        } else {
+            return Long? "<pre>" + scriptStr + "</pre>" : _("Non-standard script");
+        }
+    }
 }
 
 static std::string TimeToString(uint64_t Time)
@@ -170,7 +186,6 @@ CTxOut getPrevOut(const COutPoint &out)
 {
     CTransactionRef tx;
     uint256 hashBlock;
-    /* FIXME: Use CTransactionRef */
     if (GetTransaction(out.hash, tx, Params().GetConsensus(), hashBlock, true))
         return tx->vout[out.n];
     return CTxOut();
@@ -400,31 +415,37 @@ std::string AddressToString(const CTxDestination& address)
 
     CScript script = GetScriptForDestination(address);
     CScriptID scid(script);
-    int64_t Sum = 0;
 
-    // FIXME: pro tem
+    /*
+    bool fAddrIndex = false;
+    CScript AddressScript;
+    AddressScript.SetDestination(Address.Get());
+    int64_t Sum = 0;
+    */
     bool fAddrIndex = false;
     if (!fAddrIndex)
         return ""; // it will take too long to find transactions by address
     else
     {
         std::vector<CDiskTxPos> Txs;
-    //     paddressmap->GetTxs(Txs, scid);
-    //     for (const CDiskTxPos& pos: Txs)
-    //     {
-    //         CTransactionRef tx;
-    //         CBlockHeader block;
-    //         ReadTransaction(pos, tx, block);
-    //         BlockMap::iterator iter = mapBlockIndex.find(block.GetHash());
-    //         if (iter != mapBlockIndex.end())
-    //         {
-    //             CBlockIndex* pindex = iter->second;
-    //             if (!pindex || pindex->nStatus == BlockStatus::BLOCK_VALID_CHAIN)
-    //                 continue;
-    //             std::string Prepend = "<a href=\"" + itostr(pindex->nHeight) + "\">" + TimeToString(block.nTime) + "</a>";
-    //             TxContent += TxToRow(tx, script, Prepend, &Sum);
-    //         }
-    //     }
+        /*
+        paddressmap->GetTxs(Txs, AddressScript.GetID());
+        BOOST_FOREACH (const CDiskTxPos& pos, Txs)
+        {
+            CTransaction tx;
+            CBlock block;
+            uint256 bhash = block.GetHash();
+            GetTransaction(pos.nTxOffset, tx, bhash);
+            std::map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(block.GetHash());
+            if (mi == mapBlockIndex.end())
+                continue;
+            CBlockIndex* pindex = (*mi).second;
+            if (!pindex || !chainActive.Contains(pindex))
+                continue;
+            std::string Prepend = "<a href=\"" + itostr(pindex->nHeight) + "\">" + TimeToString(pindex->nTime) + "</a>";
+            TxContent += TxToRow(tx, AddressScript, Prepend, &Sum);
+        }
+        */
     }
     TxContent += "</table>";
 
@@ -520,7 +541,6 @@ bool BlockExplorer::switchTo(const QString& query)
     }
 
     // If the query is neither an integer nor a block hash, assume a transaction hash
-    /* FIXME: Use CTransactionRef */
     CTransactionRef tx;
     uint256 hashBlock = uint256S("0");
     if (GetTransaction(hash, tx, Params().GetConsensus(), hashBlock, true))
@@ -569,7 +589,7 @@ void BlockExplorer::setBlock(CBlockIndex* pBlock)
 
 void BlockExplorer::setContent(const std::string& Content)
 {
-    QString CSS = "body {font-size:12px; background-color: #F2E4C150; color:#333f;}\n a, span { font-family: monospace; }\n span.addr {color:rgba(255, 170, 0, 30); font-weight: bold;}\n table tr td {padding: 3px; border: none; background-color: #F2E4C1aa;}\n td.d0 {font-weight: bold; color:#261900;}\n h2, h3 { white-space:nowrap; color:#282520;}\n a { text-decoration:none; }\n a.nav {color:orange;}\n";
+    QString CSS = "body {font-size:12px; background-color: #F2E4C150; color:#333;}\n a, span { font-family: monospace; }\n span.addr {color:rgba(255, 170, 0, 30); font-weight: bold;}\n table tr td {padding: 3px; border: none; background-color: #F2E4C1aa;}\n td.d0 {font-weight: bold; color:#261900;}\n h2, h3 { white-space:nowrap; color:#282520;}\n a { text-decoration:none; }\n a.nav {color:orange;}\n";
     QString FullContent = "<html><head><style type=\"text/css\">" + CSS + "</style></head>" + "<body>" + Content.c_str() + "</body></html>";
     // printf(FullContent.toUtf8());
     ui->content->setText(FullContent);

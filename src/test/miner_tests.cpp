@@ -25,10 +25,10 @@
 
 #include <boost/test/unit_test.hpp>
 
-//DATACOIN ADDED for low difficulty mining
+// NOTE: DATACOIN added for low difficulty mining
 struct RegtestingSetup : public TestingSetup {
     RegtestingSetup() : TestingSetup(CBaseChainParams::REGTEST) {
-        //DATACOIN ADDED
+        // NOTE: DATACOIN added
         // Primecoin: Generate prime table when starting up
         GeneratePrimeTable();
         InitPrimeMiner();
@@ -36,7 +36,7 @@ struct RegtestingSetup : public TestingSetup {
 };
 
 //BOOST_FIXTURE_TEST_SUITE(miner_tests, TestingSetup)
-BOOST_FIXTURE_TEST_SUITE(miner_tests, RegtestingSetup) //DATACOIN CHANGED
+BOOST_FIXTURE_TEST_SUITE(miner_tests, RegtestingSetup) // NOTE: DATACOIN changed
 
 // BOOST_CHECK_EXCEPTION predicates to check the specific validation error
 class HasReason {
@@ -3329,7 +3329,7 @@ void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey,
     BOOST_CHECK(pblocktemplate->block.vtx[2]->GetHash() == hashHighFeeTx);
     BOOST_CHECK(pblocktemplate->block.vtx[3]->GetHash() == hashMediumFeeTx);
 
-    //DATACOIN CHANGED. In current DTACOIN MINFEE!=0
+    // NOTE: DATACOIN changed. In current DTACOIN MINFEE!=0
     //Странно что можно поставить комиссию в транзакции а пулу сказать что комиссия меньше
     // Я так понимаю при addUnchecked пул не проверет комиссию, и рассматривает ее исключительно для принятия решения
     // о relay и отдаче транзакции сборщику блока, но. А сборщик смотрит уже настоящую комиссию.
@@ -3405,13 +3405,13 @@ void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey,
 // NOTE: These tests rely on CreateNewBlock doing its own self-validation!
 BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
 {
-    //DATACOIN ADDED
+    // NOTE: DATACOIN added
     // Primecoin: Generate prime table when starting up
     //GeneratePrimeTable();
     //InitPrimeMiner();
 	
     // Note that by default, these tests run with size accounting enabled.
-    const auto chainParams = CreateChainParams(CBaseChainParams::REGTEST); //DATACOIN CHANGE was CBaseChainParams::MAIN
+    const auto chainParams = CreateChainParams(CBaseChainParams::REGTEST); // NOTE: DATACOIN changed was CBaseChainParams::MAIN
     const CChainParams& chainparams = *chainParams;
     CScript scriptPubKey = CScript() << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f") << OP_CHECKSIG;
     std::unique_ptr<CBlockTemplate> pblocktemplate;
@@ -3439,7 +3439,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
         CBlock *pblock = &pblocktemplate->block; // pointer for convenience
         {
             LOCK(cs_main);
-            pblock->nVersion = 2;	//DATACOIN CHANGE;
+            pblock->nVersion = 2;	// NOTE: DATACOIN changed;
             pblock->nTime = chainActive.Tip()->GetMedianTimePast()+1;
             CMutableTransaction txCoinbase(*pblock->vtx[0]);
             txCoinbase.nVersion = 1;
@@ -3448,8 +3448,8 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
             txCoinbase.vin[0].scriptSig.push_back(chainActive.Height());
             txCoinbase.vout.resize(1); // Ignore the (optional) segwit commitment added by CreateNewBlock (as the hardcoded nonces don't account for this)
             txCoinbase.vout[0].scriptPubKey = CScript();
-            pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus()); //DATACOIN ADDED
-            txCoinbase.vout[0].nValue = GetBlockSubsidy(pblock->nBits, chainparams.GetConsensus()); //DATACOIN ADDED
+            pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus()); // NOTE: DATACOIN added
+            txCoinbase.vout[0].nValue = GetBlockSubsidy(pblock->nBits, chainparams.GetConsensus()); // NOTE: DATACOIN added
             vBLOCKSUBSIDY.push_back(txCoinbase.vout[0].nValue);
             pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));
             if (txFirst.size() == 0)
@@ -3472,7 +3472,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     BOOST_CHECK(pblocktemplate = AssemblerForTest(chainparams).CreateNewBlock(scriptPubKey));
 
     const CAmount BLOCKSUBSIDY = vBLOCKSUBSIDY[0];
-    const CAmount LOWFEE = 5*CENT; //DATACOIN CHANGED
+    const CAmount LOWFEE = 5*CENT; // NOTE: DATACOIN changed
     const CAmount HIGHFEE = COIN;
     const CAmount HIGHERFEE = 4*COIN;
 
@@ -3522,7 +3522,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     tx.vout[0].nValue = BLOCKSUBSIDY;
     for (unsigned int i = 0; i < 128; ++i)
     {
-        tx.vout[0].nValue -= 50*CENT; //DATACOIN CHANGED 9433 bytes require about 0.5 dtc fee
+        tx.vout[0].nValue -= 50*CENT; // NOTE: DATACOIN changed 9433 bytes require about 0.5 dtc fee
         hash = tx.GetHash();
         bool spendsCoinbase = i == 0; // only first tx spends coinbase
         mempool.addUnchecked(hash, entry.Fee(50*CENT).Time(GetTime()).SpendsCoinbase(spendsCoinbase).FromTx(tx));
@@ -3585,8 +3585,8 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     while (chainActive.Tip()->nHeight < 209999) {
         CBlockIndex* prev = chainActive.Tip();
         CBlockIndex* next = new CBlockIndex();
-        next->nBits = TargetGetLimit(); //DATACOIN ADDED
-        next->nTime = prev->nTime + 60; //DATACOIN ADDED
+        next->nBits = TargetGetLimit(); // NOTE: DATACOIN added
+        next->nTime = prev->nTime + 60; // NOTE: DATACOIN added
         next->phashBlock = new uint256(InsecureRand256());
         pcoinsTip->SetBestBlock(next->GetBlockHash());
         next->pprev = prev;
@@ -3599,8 +3599,8 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)
     while (chainActive.Tip()->nHeight < 210000) {
         CBlockIndex* prev = chainActive.Tip();
         CBlockIndex* next = new CBlockIndex();
-        next->nBits = TargetGetLimit(); //DATACOIN ADDED
-        next->nTime = prev->nTime + 60; //DATACOIN ADDED		
+        next->nBits = TargetGetLimit(); // NOTE: DATACOIN added
+        next->nTime = prev->nTime + 60; // NOTE: DATACOIN added		
         next->phashBlock = new uint256(InsecureRand256());
         pcoinsTip->SetBestBlock(next->GetBlockHash());
         next->pprev = prev;

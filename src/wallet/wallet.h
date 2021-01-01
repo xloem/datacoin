@@ -44,19 +44,19 @@ extern bool fWalletRbf;
 
 static const unsigned int DEFAULT_KEYPOOL_SIZE = 1000;
 //! -paytxfee default
-static const CAmount DEFAULT_TRANSACTION_FEE = MIN_TX_FEE; //DATACOIN FEE надо проверить можно ли сделать плату меньше MIN_TX_FEE
+static const CAmount DEFAULT_TRANSACTION_FEE = MIN_TX_FEE; // NOTE: DATACOIN fee, DEFAULT_TRANSACTION_FEE = MIN_TX_FEE - it is necessary to check whether the fee can be made smaller than MIN_TX_FEE
 //! -fallbackfee default
-static const CAmount DEFAULT_FALLBACK_FEE = MIN_TX_FEE; //DATACOIN CHANGED
+static const CAmount DEFAULT_FALLBACK_FEE = MIN_TX_FEE; // NOTE: DATACOIN changed, DEFAULT_FALLBACK_FEE = MIN_TX_FEE
 //! -m_discard_rate default
-static const CAmount DEFAULT_DISCARD_FEE = MIN_TX_FEE; //DATACOIN CHANGED
+static const CAmount DEFAULT_DISCARD_FEE = MIN_TX_FEE; // NOTE: DATACOIN changed, DEFAULT_DISCARD_FEE = MIN_TX_FEE
 //! -mintxfee default
 static const CAmount DEFAULT_TRANSACTION_MINFEE = MIN_TX_FEE;
 //! minimum recommended increment for BIP 125 replacement txs
-static const CAmount WALLET_INCREMENTAL_RELAY_FEE = MIN_TX_FEE; //DATACOIN CHANGED
+static const CAmount WALLET_INCREMENTAL_RELAY_FEE = MIN_TX_FEE; // NOTE: DATACOIN changed, WALLET_INCREMENTAL_RELAY_FEE = MIN_TX_FEE 
 //! target minimum change amount
-static const CAmount MIN_CHANGE = MIN_TXOUT_AMOUNT; //DATACOIN CHANGED was CENT;
+static const CAmount MIN_CHANGE = MIN_TXOUT_AMOUNT; // NOTE: DATACOIN changed, MIN_CHANGE was CENT;
 //! final minimum change amount after paying for fees
-static const CAmount MIN_FINAL_CHANGE = MIN_TXOUT_AMOUNT; //DATACOIN CHANGED was MIN_CHANGE/2;
+static const CAmount MIN_FINAL_CHANGE = MIN_TXOUT_AMOUNT; // NOTE: DATACOIN changed, MIN_TXOUT_AMOUNT was MIN_CHANGE/2;
 //! Default for -spendzeroconfchange
 static const bool DEFAULT_SPEND_ZEROCONF_CHANGE = true;
 //! Default for -walletrejectlongchains
@@ -67,6 +67,7 @@ static const unsigned int DEFAULT_TX_CONFIRM_TARGET = 6;
 static const bool DEFAULT_WALLET_RBF = false;
 static const bool DEFAULT_WALLETBROADCAST = true;
 static const bool DEFAULT_DISABLE_WALLET = false;
+static const bool DEFAULT_DISABLE_DANDELION = false;
 
 extern const char * DEFAULT_WALLET_DAT;
 
@@ -985,6 +986,7 @@ public:
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, CConnman* connman, CValidationState& state);
     std::string SendData(CWalletTx& wtxNew, bool fAskFee, const std::string& txData);
 
+    bool GetTxMessage(CTransactionRef txref, std::string &msg);
 
     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& entries);
     bool AddAccountingEntry(const CAccountingEntry&);
@@ -1045,7 +1047,7 @@ public:
 
     const std::string& GetAccountName(const CScript& scriptPubKey) const;
 
-    void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
+    void GetScriptForMining(std::shared_ptr<CReserveScript> &script) override;
     
     unsigned int GetKeyPoolSize()
     {

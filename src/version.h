@@ -9,7 +9,7 @@
  * network protocol versioning
  */
 
-//DATACOIN VERSION
+// NOTE: DATACOIN version
 static const int PROTOCOL_VERSION = 70015;
 
 //! initial proto version, to be increased after version/verack negotiation

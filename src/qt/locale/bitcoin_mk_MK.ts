@@ -64,7 +64,7 @@
     <name>BanTableModel</name>
     </context>
 <context>
-    <name>BitcoinGUI</name>
+    <name>DatacoinGUI</name>
     <message>
         <source>Sign &amp;message...</source>
         <translation>Потпиши &amp;порака...</translation>
@@ -139,7 +139,7 @@
     </message>
     <message>
         <source>Send coins to a Datacoin address</source>
-        <translation>Испрати коини на DTC адреса</translation>
+        <translation>Испрати биткоини на Датакоин адреса</translation>
     </message>
     <message>
         <source>&amp;Verify message...</source>
@@ -147,7 +147,7 @@
     </message>
     <message>
         <source>Datacoin</source>
-        <translation>Datacoin</translation>
+        <translation>Датакоин</translation>
     </message>
     <message>
         <source>Wallet</source>
@@ -299,8 +299,8 @@
 <context>
     <name>Intro</name>
     <message>
-        <source>Bitcoin</source>
-        <translation>Биткоин</translation>
+        <source>Datacoin</source>
+        <translation>Датакоин</translation>
     </message>
     <message>
         <source>Error</source>
@@ -584,14 +584,14 @@
     <name>WalletView</name>
     </context>
 <context>
-    <name>datacoin-core</name>
+    <name>bitcoin-core</name>
     <message>
         <source>Options:</source>
         <translation>Опции:</translation>
     </message>
     <message>
         <source>Datacoin Core</source>
-        <translation>Datacoin Core</translation>
+        <translation>Датакоин Core</translation>
     </message>
     <message>
         <source>Warning</source>

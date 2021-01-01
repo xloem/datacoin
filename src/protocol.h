@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <string>
 
-#define PRIMECOIN_PORT   4777
 #define RPC_PORT         11777 
 #define TESTNET_PORT     4776
 #define TESTNET_RPC_PORT 11776
@@ -243,6 +242,10 @@ extern const char *GETBLOCKTXN;
  * @since protocol version 70014 as described by BIP 152
  */
 extern const char *BLOCKTXN;
+/**
+ * The Dandelion tx message transmits a single Dandelion transaction.
+ */
+extern const char *DANDELIONTX;
 };
 
 /* Get a vector of all valid message types (see above) */
@@ -308,7 +311,7 @@ enum ServiceFlags : uint64_t {
  * should be updated appropriately to filter for the same nodes.
  */
 static ServiceFlags GetDesirableServiceFlags(ServiceFlags services) {
-    //DATACOIN SEGWIT 
+    // TODO(gjh): DATACOIN segwit
     //we auto connect only nodes with all these flags.
     //now there are not witness nodes
     //Turn on NODE_WITNESS only after many nodes (especially seed nodes) 
@@ -386,9 +389,11 @@ enum GetDataMsg
     // The following can only occur in getdata. Invs always use TX or BLOCK.
     MSG_FILTERED_BLOCK = 3,  //!< Defined in BIP37
     MSG_CMPCT_BLOCK = 4,     //!< Defined in BIP152
+    MSG_DANDELION_TX = 5,    //!< Dandelion
     MSG_WITNESS_BLOCK = MSG_BLOCK | MSG_WITNESS_FLAG, //!< Defined in BIP144
     MSG_WITNESS_TX = MSG_TX | MSG_WITNESS_FLAG,       //!< Defined in BIP144
     MSG_FILTERED_WITNESS_BLOCK = MSG_FILTERED_BLOCK | MSG_WITNESS_FLAG,
+    MSG_DANDELION_WITNESS_TX = MSG_DANDELION_TX | MSG_WITNESS_FLAG,
 };
 
 /** inv message data */

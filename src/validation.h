@@ -54,11 +54,11 @@ static const bool DEFAULT_WHITELISTFORCERELAY = true;
 /** Default for -minrelaytxfee, minimum relay fee for transactions */
 static const unsigned int DEFAULT_MIN_RELAY_TX_FEE = MIN_TX_FEE;
 //! -maxtxfee default
-static const CAmount DEFAULT_TRANSACTION_MAXFEE = 10 * COIN; //DATACOIN CHANGED
+static const CAmount DEFAULT_TRANSACTION_MAXFEE = 10 * COIN; // NOTE: DATACOIN changed
 //! Discourage users to set fees higher than this amount (in satoshis) per kB
-static const CAmount HIGH_TX_FEE_PER_KB = 0.05 * COIN;  //DATACOIN CHANGED
+static const CAmount HIGH_TX_FEE_PER_KB = 0.05 * COIN;  // NOTE: DATACOIN changed
 //! -maxtxfee will warn if called with a higher fee than this amount (in satoshis)
-static const CAmount HIGH_MAX_TX_FEE = 128 * HIGH_TX_FEE_PER_KB + MIN_TX_FEE; //DATACOIN CHANGED
+static const CAmount HIGH_MAX_TX_FEE = 128 * HIGH_TX_FEE_PER_KB + MIN_TX_FEE; // NOTE: DATACOIN changed
 /** Default for -limitancestorcount, max number of in-mempool ancestors */
 static const unsigned int DEFAULT_ANCESTOR_LIMIT = 25;
 /** Default for -limitancestorsize, maximum kilobytes of tx + all in-mempool ancestors */
@@ -83,7 +83,7 @@ static const int MAX_SCRIPTCHECK_THREADS = 16;
 /** -par default (number of script-checking threads, 0 = auto) */
 static const int DEFAULT_SCRIPTCHECK_THREADS = 0;
 /** Number of blocks that can be requested at any given time from a single peer. */
-static const int MAX_BLOCKS_IN_TRANSIT_PER_PEER = 1000; //DATACOIN SYNC. Agrressive sync. was 16
+static const int MAX_BLOCKS_IN_TRANSIT_PER_PEER = 1000; // NOTE: DATACOIN sync. Agrressive sync. was 16
 /** Timeout in seconds during which a peer must stall block download progress before being disconnected. */
 static const unsigned int BLOCK_STALLING_TIMEOUT = 2;
 /** Number of headers sent in one getheaders result. We rely on the assumption that if a peer sends
@@ -131,7 +131,7 @@ static const int64_t MAX_FEE_ESTIMATION_TIP_AGE = 3 * 60 * 60;
 /** Default for -permitbaremultisig */
 static const bool DEFAULT_PERMIT_BAREMULTISIG = true;
 static const bool DEFAULT_CHECKPOINTS_ENABLED = true;
-static const bool DEFAULT_TXINDEX = true; //DATACOIN CHANGED
+static const bool DEFAULT_TXINDEX = true; // NOTE: DATACOIN changed
 static const unsigned int DEFAULT_BANSCORE_THRESHOLD = 100;
 /** Default for -persistmempool */
 static const bool DEFAULT_PERSIST_MEMPOOL = true;
@@ -160,6 +160,7 @@ extern CScript COINBASE_FLAGS;
 extern CCriticalSection cs_main;
 extern CBlockPolicyEstimator feeEstimator;
 extern CTxMemPool mempool;
+extern CTxMemPool stempool;
 typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;
 extern BlockMap& mapBlockIndex;
 extern uint64_t nLastBlockTx;

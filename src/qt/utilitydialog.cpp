@@ -83,6 +83,7 @@ HelpMessageDialog::HelpMessageDialog(QWidget *parent, bool about) :
         if (showDebug) {
             strUsage += HelpMessageOpt("-allowselfsignedrootcertificates", strprintf("Allow self signed root certificates (default: %u)", DEFAULT_SELFSIGNED_ROOTCERTS));
         }
+        strUsage += HelpMessageOpt("-chart", strprintf(tr("Render difficulty and hashrate graphs (default: %u)").toStdString(), DEFAULT_CHARTPLOTTING));
         strUsage += HelpMessageOpt("-choosedatadir", strprintf(tr("Choose data directory on startup (default: %u)").toStdString(), DEFAULT_CHOOSE_DATADIR));
         strUsage += HelpMessageOpt("-lang=<lang>", tr("Set language, for example \"de_DE\" (default: system locale)").toStdString());
         strUsage += HelpMessageOpt("-min", tr("Start minimized").toStdString());

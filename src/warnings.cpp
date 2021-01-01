@@ -54,15 +54,6 @@ std::string GetWarnings(const std::string& strFor)
     if (gArgs.GetBoolArg("-testsafemode", DEFAULT_TESTSAFEMODE))
         strStatusBar = strRPC = strGUI = "testsafemode enabled";
 
-    // Checkpoint warning
-	//DATACOIN CHECKPOINTSYNC
-    //if (strCheckpointWarning != "")
-    //{
-    //    //nPriority = 900;
-    //    strStatusBar = strCheckpointWarning;
-	//	strGUI += (strGUI.empty() ? "" : uiAlertSeperator) + strCheckpointWarning;
-    //}
-
     // Misc warnings like out of disk space and clock is wrong
     if (strMiscWarning != "")
     {
@@ -81,8 +72,8 @@ std::string GetWarnings(const std::string& strFor)
         strGUI += (strGUI.empty() ? "" : uiAlertSeperator) + _("Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.");
     }
 
-    // ppcoin: if detected invalid checkpoint enter safe mode
-	//DATACOIN CHECKPOINTSYNC
+    // NOTE: PPCOIN if detected invalid checkpoint enter safe mode
+	// NOTE: DATACOIN checkpointsync (disabled)
     //if (hashInvalidCheckpoint != uint256(0))
     //{
     //    //nPriority = 3000;

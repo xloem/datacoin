@@ -8,14 +8,24 @@
 
 #include <arith_uint256.h>
 #include <chain.h>
+#include <chainparams.h>
+#include <chainparamsbase.h>
 #include <primitives/block.h>
 #include <uint256.h>
+#include <util.h>
+
+bool TestNet()
+{
+    if (ChainNameFromCommandLine() == CBaseChainParams::TESTNET)
+        return true;
+    return false;
+}
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
-	//DATACOIN OPTIMIZE? В тестах при нереалистичных входных ("In tests with unrealistic input") (pindexPrev->nBits==0) и nActualSpacing==0 
-	//функция возвращает значение ниже ("the function returns a value below") TargetGetLimit().
-	//Изменить чтобы возвращала всегда не менее ("Change to always return at least") TargetGetLimit() ???
+	// TODO(gjh): DATACOIN optimize?
+    // In tests with unrealistic input, (pindexPrev->nBits == 0) and (nActualSpacing == 0) the
+    // function returns a value below TargetGetLimit(). Change to always return at least TargetGetLimit() ???
     unsigned int nBits = TargetGetLimit();
 
     // Genesis block
@@ -29,7 +39,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     if (pindexPrevPrev->pprev == NULL)
         return TargetGetInitial(); // second block
 
-    // Primecoin: continuous target adjustment on every block
+    // NOTE: PRIMECOIN continuous target adjustment on every block
     int64_t nInterval = params.nPowTargetTimespan / params.nPowTargetSpacing;
     int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
     if (!TargetGetNext(pindexPrev->nBits, nInterval, params.nPowTargetSpacing, nActualSpacing, nBits))

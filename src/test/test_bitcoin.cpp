@@ -6,6 +6,7 @@
 
 #include <chainparams.h>
 #include <consensus/consensus.h>
+#include <consensus/params.h>
 #include <consensus/validation.h>
 #include <crypto/sha256.h>
 #include <validation.h>
@@ -120,8 +121,8 @@ TestingSetup::~TestingSetup()
 
 TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
 {
-    //DATACOIN ADDED
-    // Primecoin: Generate prime table when starting up
+    // NOTE: DATACOIN added
+    // NOTE: PRIMECOIN Generate prime table when starting up
     GeneratePrimeTable();
     InitPrimeMiner();
 
@@ -131,10 +132,10 @@ TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)
     // Generate a 100-block chain:
     coinbaseKey.MakeNewKey(true);
     CScript scriptPubKey = CScript() <<  ToByteVector(coinbaseKey.GetPubKey()) << OP_CHECKSIG;
-    for (int i = 0; i < COINBASE_MATURITY; i++)
+    const Consensus::Params& params = Params().GetConsensus();
+    for (int i = 0; i < params.nCoinbaseMaturity; i++)
     {
         std::vector<CMutableTransaction> noTxns;
-        //std::cerr << "TRY i " << i << "\n";
         CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);
         coinbaseTxns.push_back(*b.vtx[0]);
     }
@@ -162,18 +163,18 @@ TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>&
         IncrementExtraNonce(&block, chainActive.Tip(), extraNonce);
     }
 
-    //DATACOIN MINER
-    //unsigned int nChainType;
-    //unsigned int nChainLength;
-    //while (!CheckProofOfWork(block.GetHeaderHash(), block.nBits, Params().GetConsensus(), bnProbablePrime, nChainType, nChainLength)) ++block.nNonce;
+    // NOTE: DATACOIN miner
+    // unsigned int nChainType;
+    // unsigned int nChainLength;
+    // while (!CheckProofOfWork(block.GetHeaderHash(), block.nBits, Params().GetConsensus(), bnProbablePrime, nChainType, nChainLength)) ++block.nNonce;
 	while (!CheckProofOfWork(block.GetHeaderHash(), block.nBits, Params().GetConsensus(), block.bnPrimeChainMultiplier, block.nPrimeChainType, block.nPrimeChainLength)) ++block.nNonce;
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
     if (!ProcessNewBlock(chainparams, shared_pblock, true, nullptr)) 
     {
-        //std::cerr << "ERROR in ProcessNewBlock\n";
+        // std::cerr << "ERROR in ProcessNewBlock\n";
     }
-    //else {std::cerr << "---ACCEPTED---\n";}
+    // else {std::cerr << "---ACCEPTED---\n";}
 
     CBlock result = block;
     return result;
@@ -194,7 +195,7 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn) {
                            spendsCoinbase, sigOpCost, lp);
 }
 
-/** //DATACOIN CHANGED
+/** // NOTE: DATACOIN changed
  * @returns a real block (2c69c597d88be01c544c38c3dfd97d08d0bf19353ba18e4abc48d251f2aa72ee)
  *      with 7 txs.
  */

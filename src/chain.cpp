@@ -122,37 +122,13 @@ void CBlockIndex::BuildSkip()
 // Get block work value for main chain protocol
 arith_uint256 GetBlockProof(const CBlockIndex& block)
 {
-//    arith_uint256 bnTarget;
-//    bool fNegative;
-//    bool fOverflow;
-//    bnTarget.SetCompact(block.nBits, &fNegative, &fOverflow);
-//    if (fNegative || fOverflow || bnTarget == 0)
-//        return 0;
-//    // We need to compute 2**256 / (bnTarget+1), but we can't represent 2**256
-//    // as it's too large for an arith_uint256. However, as 2**256 is at least as large
-//    // as bnTarget+1, it is equal to ((2**256 - bnTarget - 1) / (bnTarget+1)) + 1,
-//    // or ~bnTarget / (bnTarget+1) + 1.
-//    return (~bnTarget / (bnTarget + 1)) + 1;
-    //DATACOIN CHANGED
-    //return TargetGetLength(block.nBits)+1;
-    // Primecoin: 
-    // Difficulty multiplier of extra prime is estimated by nWorkTransitionRatio
-    // Difficulty multiplier of fractional is estimated by
-    //   r = 1/TransitionRatio
-    //   length >= n discovery rate = 1
-    //   length > n discovery rate = 1/TransitionRatio
-    //   length == n discovery rate: 1 - 1/TransitionRatio
-    //   meeting target rate 1/FractionalDiff * (1 - 1/TransitionRatio) + 1/TranstionRatio
-    //   fractionalDiff = nFractionalDiffculty / nFractionalDifficultyMin
-    //   fractional multiplier = 1 / meeting target rate
-    //       = (TransitionRatio * FractionalDiff) / (TransitionRatio - 1 + FractionalDiff)
     uint64_t nFractionalDifficulty = TargetGetFractionalDifficulty(block.nBits);
     unsigned int nWorkExp = 8;
     nWorkExp += nWorkTransitionRatioLog * (TargetGetLength(block.nBits) - Params().GetConsensus().nTargetMinLength);
     CBigNum bnWork = CBigNum(1) << nWorkExp;
     bnWork *= ((uint64_t) nWorkTransitionRatio) * nFractionalDifficulty;
     bnWork /= (((uint64_t) nWorkTransitionRatio - 1) * nFractionalDifficultyMin + nFractionalDifficulty);
-    return UintToArith256(bnWork.getuint256()); //DATACOIN OPTIMIZE? Оптимизировать возвращение arith_uint256?
+    return UintToArith256(bnWork.getuint256()); // TODO(gjh): DATACOIN optimize? Swap Bignum for arith_uint256?
 }
 
 int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& from, const CBlockIndex& tip, const Consensus::Params& params)

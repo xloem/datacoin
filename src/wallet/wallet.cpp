@@ -10,6 +10,7 @@
 #include <chain.h>
 #include <wallet/coincontrol.h>
 #include <consensus/consensus.h>
+#include <consensus/params.h>
 #include <consensus/validation.h>
 #include <fs.h>
 #include <wallet/init.h>
@@ -1726,12 +1727,21 @@ bool CWalletTx::RelayWalletTransaction(CConnman* connman)
         if (InMempool() || AcceptToMemoryPool(maxTxFee, state)) {
             LogPrintf("Relaying wtx %s\n", GetHash().ToString());
             if (connman) {
-                CInv inv(MSG_TX, GetHash());
-                connman->ForEachNode([&inv](CNode* pnode)
-                {
-                    pnode->PushInventory(inv);
-                });
-                return true;
+                if (gArgs.GetBoolArg("-disabledandelion", DEFAULT_DISABLE_DANDELION)) {
+                    int64_t nCurrTime = GetTimeMicros();
+                    int64_t nEmbargo = 1000000*DANDELION_EMBARGO_MINIMUM+PoissonNextSend(nCurrTime, DANDELION_EMBARGO_AVG_ADD);
+                    connman->insertDandelionEmbargo(GetHash(),nEmbargo);
+                    LogPrint(BCLog::DANDELION, "dandeliontx %s embargoed for %d seconds\n", GetHash().ToString(), (nEmbargo-nCurrTime)/1000000);
+                    CInv inv(MSG_DANDELION_TX, GetHash());
+                    return connman->localDandelionDestinationPushInventory(inv);
+                } else {
+                    CInv inv(MSG_TX, GetHash());
+                    connman->ForEachNode([&inv](CNode* pnode)
+                    {
+                        pnode->PushInventory(inv);
+                    });
+                    return true;
+                }
             }
         }
     }
@@ -2681,11 +2691,6 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
         if (recipient.fSubtractFeeFromAmount)
             nSubtractFeeFromAmount++;
     }
-    //if (vecSend.empty())
-    //{
-    //    strFailReason = _("Transaction must have at least one recipient");
-    //    return false;
-    //}
 
     wtxNew.fTimeReceivedIsTxTime = true;
     wtxNew.BindWallet(this);
@@ -2842,7 +2847,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
 
                 CAmount nChange = nValueIn - nValueToSelect;
 
-				// ppcoin: sub-cent change is moved to fee
+				// NOTE: PPCOIN sub-cent change is moved to fee
                 if (nChange > 0 && nChange < MIN_TXOUT_AMOUNT)
                 {
                     nFeeRet += nChange;
@@ -2891,10 +2896,10 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT
                 // to avoid conflicting with other possible uses of nSequence,
                 // and in the spirit of "smallest possible change from prior
                 // behavior."
-                //DATACOIN OLDCLIENT Костыль из за старых клиентов. Создаем транзакции старого формата. Потом вернуть как было.
-                // ("Crutch from for old customers. Create a transaction of the old format. Then return as it was.")
+                // NOTE: DATACOIN OLDCLIENT support for old clients w.r.t rbf.
+                // Create a transaction of the old format. Then return as it was.
                 const uint32_t nSequence = CTxIn::SEQUENCE_FINAL;
-                //const uint32_t nSequence = coin_control.signalRbf ? MAX_BIP125_RBF_SEQUENCE : (CTxIn::SEQUENCE_FINAL - 1);
+                // const uint32_t nSequence = coin_control.signalRbf ? MAX_BIP125_RBF_SEQUENCE : (CTxIn::SEQUENCE_FINAL - 1);
                 for (const auto& coin : setCoins)
                     txNew.vin.push_back(CTxIn(coin.outpoint,CScript(),
                                               nSequence));
@@ -3186,6 +3191,30 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)
     uiInterface.LoadWallet(this);
 
     return DB_LOAD_OK;
+}
+
+bool GetTxMessage(CTransactionRef txref, std::string &msg)
+{
+    for (const CTxOut& txout : txref->vout) {
+
+        if ( 0 != txout.nValue )
+           continue;
+
+        txnouttype which_type;
+        std::vector<std::vector<unsigned char>> solutions_data;
+
+        if (!Solver(txout.scriptPubKey, which_type, solutions_data))
+            return false;
+
+        if (which_type == TX_NULL_DATA)
+        {
+            std::string str(txout.scriptPubKey.begin(), txout.scriptPubKey.end());
+            msg = str;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 DBErrors CWallet::ZapSelectTx(std::vector<uint256>& vHashIn, std::vector<uint256>& vHashOut)
@@ -4207,7 +4236,7 @@ int CMerkleTx::GetBlocksToMaturity() const
 {
     if (!IsCoinBase())
         return 0;
-    return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain()); //TODO: COINBASE_MATURITY+200 ?
+    return std::max(0, (Params().GetConsensus().nCoinbaseMaturity+1) - GetDepthInMainChain());
 }
 
 
@@ -4223,8 +4252,18 @@ bool CWalletTx::AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& 
     // user could call sendmoney in a loop and hit spurious out of funds errors
     // because we think that the transaction they just generated's change is
     // unavailable as we're not yet aware its in mempool.
-    bool ret = ::AcceptToMemoryPool(mempool, state, tx, nullptr /* pfMissingInputs */,
-                                nullptr /* plTxnReplaced */, false /* bypass_limits */, nAbsurdFee);
+    bool ret;
+    if (gArgs.GetBoolArg("-disabledandelion", DEFAULT_DISABLE_DANDELION)) {
+        ret = ::AcceptToMemoryPool(stempool, state, tx, nullptr /* pfMissingInputs */,
+                                    nullptr /* plTxnReplaced */, false /* bypass_limits */, nAbsurdFee);
+    } else {
+        ret = ::AcceptToMemoryPool(mempool, state, tx, nullptr /* pfMissingInputs */,
+                                    nullptr /* plTxnReplaced */, false /* bypass_limits */, nAbsurdFee);
+        // Changes to mempool should also be made to Dandelion stempool
+        CValidationState dummyState;
+        ret = ::AcceptToMemoryPool(stempool, dummyState, tx, nullptr /* pfMissingInputs */,
+                                    nullptr /* plTxnReplaced */, false /* bypass_limits */, nAbsurdFee);
+    }
     fInMempool = ret;
     return ret;
 }

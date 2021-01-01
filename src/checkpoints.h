@@ -22,10 +22,6 @@ namespace Checkpoints
 //! Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
 CBlockIndex* GetLastCheckpoint(const CCheckpointData& data);
 
-// Returns the block hash of latest hardened checkpoint
-uint256 GetLatestHardenedCheckpoint();
-
-
 } //namespace Checkpoints
 
 #endif // BITCOIN_CHECKPOINTS_H

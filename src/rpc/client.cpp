@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2017 The Bitcoin Core developers
+// Copyright (c) 2020 The Datacoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -31,8 +32,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "generate", 1, "maxtries" },
     { "generatetoaddress", 0, "nblocks" },
     { "generatetoaddress", 2, "maxtries" },
-//    { "getnetworkhashps", 0, "nblocks" },
-//    { "getnetworkhashps", 1, "height" },
+    { "getnetworkhashps", 0, "lookup" },
+    { "getnetworkhashps", 1, "height" },
     { "sendtoaddress", 1, "amount" },
     { "sendtoaddress", 4, "subtractfeefromamount" },
     { "sendtoaddress", 5 , "replaceable" },
@@ -156,6 +157,10 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "enforcecheckpoint", 0, "enforce"}, // ConvertTo<bool>(params[0]);
     { "listprimerecords", 0, "primechain_length"},
     { "listtopprimes", 0, "primechain_length"},
+    { "makekeypair", 0, "uncompressed" },
+    { "renderblock", 0, "block" },
+    { "dumptriples", 1, "start" },
+    { "dumptriples", 2, "end" },
 };
 
 class CRPCConvertTable

@@ -388,7 +388,7 @@ BOOST_FIXTURE_TEST_CASE(rescan, TestChain100Setup)
         WalletRescanReserver reserver(&wallet);
         reserver.reserve();
         BOOST_CHECK_EQUAL(nullBlock, wallet.ScanForWalletTransactions(oldTip, nullptr, reserver));
-        BOOST_CHECK_EQUAL(wallet.GetImmatureBalance(), 92484000000); //DATACOIN CHANGED
+        BOOST_CHECK_EQUAL(wallet.GetImmatureBalance(), 92484000000); // NOTE: DATACOIN changed
     }
 	
     // Prune the older block file.
@@ -403,7 +403,7 @@ BOOST_FIXTURE_TEST_CASE(rescan, TestChain100Setup)
         WalletRescanReserver reserver(&wallet);
         reserver.reserve();
         BOOST_CHECK_EQUAL(oldTip, wallet.ScanForWalletTransactions(oldTip, nullptr, reserver));
-        BOOST_CHECK_EQUAL(wallet.GetImmatureBalance(), 46239000000); //DATACOIN CHANGED
+        BOOST_CHECK_EQUAL(wallet.GetImmatureBalance(), 46239000000); // NOTE: DATACOIN changed
     }
 
     // Verify importmulti RPC returns failure for a key whose creation time is

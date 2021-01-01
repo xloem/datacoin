@@ -1,4 +1,5 @@
 // Copyright (c) 2011-2017 The Bitcoin Core developers
+// Copyright (c) 2020 The Datacoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,9 +18,9 @@ class ReceiveCoinsDialog;
 class SendCoinsDialog;
 class SendCoinsRecipient;
 class TransactionView;
+class MiningPage;
 class WalletModel;
 class AddressBookPage;
-class BlockExplorer;
 
 QT_BEGIN_NAMESPACE
 class QModelIndex;
@@ -61,11 +62,11 @@ private:
 
     OverviewPage *overviewPage;
     QWidget *transactionsPage;
+    MiningPage *miningPage;
     ReceiveCoinsDialog *receiveCoinsPage;
     SendCoinsDialog *sendCoinsPage;
     AddressBookPage *usedSendingAddressesPage;
     AddressBookPage *usedReceivingAddressesPage;
-    BlockExplorer *explorerWindow;
 
     TransactionView *transactionView;
 
@@ -77,6 +78,12 @@ public Q_SLOTS:
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
+    /** Switch to Explorer page */
+    void gotoBlockExplorerPage();
+    /** Switch to mining page */
+    void gotoMiningPage();
+    /** Switch to Multisig Dialog */
+    void gotoMultisigDialog();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
@@ -86,9 +93,6 @@ public Q_SLOTS:
     void gotoSignMessageTab(QString addr = "");
     /** Show Sign/Verify Message dialog and switch to verify message tab */
     void gotoVerifyMessageTab(QString addr = "");
-
-    /** Switch to explorer page */
-    void gotoBlockExplorerPage();
 
     /** Show incoming transaction notification for new transactions.
 
@@ -117,6 +121,9 @@ public Q_SLOTS:
 
     /** User has requested more information about the out of sync state */
     void requestedSyncWarningInfo();
+
+    /** Update the plot on the overview (home) page */
+    void updatePlot(int count);
 
 Q_SIGNALS:
     /** Signal that we want to show the main window */

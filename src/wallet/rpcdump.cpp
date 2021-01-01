@@ -314,7 +314,7 @@ UniValue importaddress(const JSONRPCRequest& request)
             std::vector<unsigned char> data(ParseHex(request.params[0].get_str()));
             ImportScript(pwallet, CScript(data.begin(), data.end()), strLabel, fP2SH);
         } else {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address or script");
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Datacoin address or script");
         }
     }
     if (fRescan)
@@ -803,37 +803,51 @@ UniValue makekeypair(const JSONRPCRequest& request)
         return NullUniValue;
     }
 
-    if (request.fHelp || request.params.size() > 0)
+    if (request.fHelp || request.params.size() > 1)
         throw std::runtime_error(
             "makekeypair\n"
             "\nMake a public/private key pair.\n"
-            "\nExamples:\n"
+            "\nArguments:\n"
+            "1. \"uncompressed\"    (boolean, optional, default=false) Create uncompressed keys.)\n"
+            "\nResult:\n"
+            "{                           (json object)\n"
+            "  \"key data\" : {        (string) The public/private keypair\n"
+            "}\n"
             "\nMake a public/private key pair.\n"
             + HelpExampleCli("makekeypair", "") +
             "\nAs a JSON-RPC call\n"
             + HelpExampleRpc("makekeypair", "")
             );
 
-    CKey key;
-    key.MakeNewKey(true);
-    CPubKey pubkey = key.GetPubKey();
-    CKeyID address = pubkey.GetID();
-    CPrivKey privkey = key.GetPrivKey();
+    // Whether to generate uncompressed keys
+    bool compressed_wanted = true;
+    if (!request.params[0].isNull()) {
+        compressed_wanted = request.params[0].isNum() ? (request.params[0].get_int() != 0) : request.params[0].get_bool();
+    }
 
-    CKey ukey;
-    ukey.MakeNewKey(false);
-    CPubKey upubkey = ukey.GetPubKey();
-    CPrivKey uprivkey = ukey.GetPrivKey();
-    CKeyID uaddress = upubkey.GetID();
+    std::vector<std::string> addresstypes = {"legacy", "segwit", "bech32"};
+
+    int i = 0;
+    CKey key;
+    key.MakeNewKey(compressed_wanted);
+    CPubKey pubkey = key.GetPubKey();
+    CPrivKey privkey = key.GetPrivKey();
+    std::vector<CTxDestination> dests = GetAllDestinationsForKey(pubkey);
+
+    UniValue addresses(UniValue::VOBJ);
+    for (const auto& dest : GetAllDestinationsForKey(pubkey)) {
+        addresses.push_back(Pair(strprintf("%s", addresstypes[i]), EncodeDestination(dest)));
+        i++;
+    }
 
     UniValue result(UniValue::VOBJ);
-    result.push_back(Pair("private_key", HexStr(key)));
-    // result.push_back(Pair("U public_key", ukey.ToString()));
-    // result.push_back(Pair("U wallet_address", uaddress));
-    // result.push_back(Pair("U wallet_private_key", uprivkey));
-    // result.push_back(Pair("C public_key", pubkey.ToString()));
-    // result.push_back(Pair("C wallet_address", address));
-    // result.push_back(Pair("C wallet_private_key", privkey));
+
+    result.push_back(Pair("compressed", compressed_wanted));
+    result.push_back(Pair("addresses", addresses));
+    result.push_back(Pair("privkey", CBitcoinSecret(key).ToString()));
+    result.push_back(Pair("public key", HexStr(pubkey)));
+    result.push_back(Pair("private key", HexStr(key)));
+
     return result;
 }
 

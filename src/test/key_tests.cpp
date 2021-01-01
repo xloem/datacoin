@@ -16,8 +16,8 @@
 
 #include <boost/test/unit_test.hpp>
 
-//DATACOIN ADDED //DATACOIN CHANGED об набора адресов работают. 
-//Первый набор сделал из изначально не compressed ключей
+// NOTE: DATACOIN added / changed
+// Create proper compressed/uncompressed keys
 //static const std::string strSecret1 = "6K1gCRe1HEKgLgJs1GGPKhdg1UFfhRsPVfKBv4bMwvg1jGMB61q";
 //static const std::string strSecret2 = "6KEjBhru5NKsZZbY8p1BcB9788ezwbF3YDJUdFwkAVrzYxNYs7x";
 //static const std::string strSecret1C = "QSVz1RkLEdoSdrVqiANuXYLsB5HjoSmQHW7HBCrfTRuCDA4r1JCV";
@@ -27,7 +27,6 @@
 //static const std::string addr1C = "DK1HiS2f1aGosPMQGJEa1pDKJfDH29Y2Ng";
 //static const std::string addr2C = "DEMAtHe1PdvxcaLY6kB1Nwtpkpm6xrY6mU";
 
-//Второй набор сделал из изначально compressed ключей
 static const std::string strSecret1 = "6Kuvgivks4QNdVK19ComSa7x9K9UwPXeUay4RVRwsrMcqMMn4qi";
 static const std::string strSecret2 = "6JcYxzHZrMzNA2CZp5P7P11eBHDJctd5jhbrYMHzdT4R7vr7DmD";
 static const std::string strSecret1C = "QWUbxL4Gbx2AU3xTdD7R9sBgPh6SK4SGQkvS76V7DSr1AR1EENEY";

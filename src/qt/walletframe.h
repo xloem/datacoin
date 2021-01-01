@@ -1,4 +1,5 @@
 // Copyright (c) 2011-2016 The Bitcoin Core developers
+// Copyright (c) 2020 The Datacoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,6 +16,7 @@ class SendCoinsRecipient;
 class WalletModel;
 class WalletView;
 class BlockExplorer;
+class MultisigDialog;
 
 QT_BEGIN_NAMESPACE
 class QStackedWidget;
@@ -67,13 +69,16 @@ public Q_SLOTS:
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
+    /** Switch to Explorer page */
+    void gotoBlockExplorerPage();
+    /** Switch to mining page */
+    void gotoMiningPage();
+    /** Switch to multisig dialog */
+    void gotoMultisigDialog();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
     void gotoSendCoinsPage(QString addr = "");
-
-    /** Switch to explorer page */
-    void gotoBlockExplorerPage();
 
     /** Show Sign/Verify Message dialog and switch to sign message tab */
     void gotoSignMessageTab(QString addr = "");
@@ -95,6 +100,8 @@ public Q_SLOTS:
     void usedReceivingAddresses();
     /** Pass on signal over requested out-of-sync-warning information */
     void outOfSyncWarningClicked();
+    /** Update the plot on the overview (home) page */
+    void updatePlot(int count);
 };
 
 #endif // BITCOIN_QT_WALLETFRAME_H

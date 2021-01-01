@@ -10,6 +10,7 @@
 #include <init.h>
 #include <random.h>
 #include <sync.h>
+#include <validation.h>
 #include <ui_interface.h>
 #include <util.h>
 #include <utilstrencodings.h>
@@ -114,6 +115,67 @@ CAmount AmountFromValue(const UniValue& value)
     if (!MoneyRange(amount))
         throw JSONRPCError(RPC_TYPE_ERROR, "Amount out of range");
     return amount;
+}
+
+std::string HexBits(uint64_t nDifficulty)
+{
+    union {
+        int64_t nDifficulty;
+        char cDifficulty[8];
+    } uDifficulty;
+
+    int num = 42;
+    if(*(char *)&num == 42) //test big/little endian
+      uDifficulty.nDifficulty = (((uint64_t) htonl((uint32_t) nDifficulty)) << 32) + 
+                    htonl((uint32_t) (nDifficulty >> 32));
+    else 
+      uDifficulty.nDifficulty = nDifficulty;
+
+    return HexStr(BEGIN(uDifficulty.cDifficulty), END(uDifficulty.cDifficulty));
+}
+
+// Return average network primes per second based on the last 'lookup' blocks,
+// or from the last difficulty change if 'lookup' is nonpositive.
+// If 'height' is nonnegative, compute the estimate at the time when a given block was found.
+UniValue GetNetworkPrimePS(int lookup, int height) {
+    /*
+    CBlockIndex *pb = chainActive.Tip();
+
+    if (height >= 0 && height < chainActive.Height())
+        pb = chainActive[height];
+
+    if (pb == NULL || !pb->nHeight)
+        return 0;
+
+    // If lookup is -1, then use blocks since last difficulty change.
+    if (lookup <= 0)
+        lookup = pb->nHeight % 2016 + 1;
+
+    // If lookup is larger than chain, then set it to chain length.
+    if (lookup > pb->nHeight)
+        lookup = pb->nHeight;
+
+    CBlockIndex *pb0 = pb;
+    int64_t minTime = pb0->GetBlockTime();
+    int64_t maxTime = minTime;
+    // exclude the genesis block
+    for (int i = 0; i < lookup && pb0->pprev->pprev; i++) {
+        pb0 = pb0->pprev;
+        int64_t time = pb0->GetBlockTime();
+        minTime = std::min(time, minTime);
+        maxTime = std::max(time, maxTime);
+    }
+
+    // In case there's a situation where minTime == maxTime, we don't want a divide by zero exception.
+    if (minTime == maxTime)
+        return 0;
+
+    uint256 workDiff = pb->nChainWork - pb0->nChainWork;
+    int64_t timeDiff = maxTime - minTime;
+
+    return (int64_t)(workDiff.getdouble() / timeDiff);
+    */
+    return NullUniValue;
 }
 
 uint256 ParseHashV(const UniValue& v, std::string strName)
