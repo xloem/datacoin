@@ -2641,9 +2641,7 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
     CBlockIndex *pindexMostWork = nullptr;
     CBlockIndex *pindexNewTip = nullptr;
     int nStopAtHeight = gArgs.GetArg("-stopatheight", DEFAULT_STOPATHEIGHT);
-    /* FIXME gjh unused - should it be?
     bool fInitialDownload = true;
-    */
     bool fShutdownRequested;
     do {
         boost::this_thread::interruption_point();
@@ -2696,7 +2694,7 @@ bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams&
             if (!blocks_connected) return true;
 
             const CBlockIndex* pindexFork = chainActive.FindFork(starting_tip);
-            bool fInitialDownload = IsInitialBlockDownload();
+            fInitialDownload = IsInitialBlockDownload();
 
             // Notify external listeners about the new tip.
             // Enqueue while holding cs_main to ensure that UpdatedBlockTip is called in the order in which blocks are connected

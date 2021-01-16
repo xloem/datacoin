@@ -971,7 +971,7 @@ void static DatacoinCPUMiner(int nThread, int numThreads, const CChainParams& ch
 int GenerateDatacoins(bool fGenerate, int nThreads, const CChainParams& chainparams)
 {
     // pro tem, whilst developing
-    bool use_server = false;
+    bool use_server = true;
 
     static boost::thread_group* minerThreads = NULL;
 
